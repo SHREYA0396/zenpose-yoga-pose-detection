@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🧘 ZenPose — AI Yoga Pose Detection System
 
 > Real-time yoga pose detection using MediaPipe + Machine Learning, with voice feedback, OTP authentication, and progress tracking.
@@ -178,3 +179,5 @@ Uses the **Web Speech API** (browser-native, no API key needed):
 3. **Add HTTPS** — required for webcam access in production browsers
 4. **Rate-limit `/api/detect`** to prevent abuse
 5. **Store sessions in Redis** instead of Flask cookie sessions for scalability
+
+>>>>>>> 42bc56ee571f8d0122483a2279b67e8fdb6cdd96
