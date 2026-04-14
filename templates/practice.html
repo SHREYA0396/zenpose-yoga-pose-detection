@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Practice – ZenPose{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/practice.css"/>{% endblock %}
+{% block body %}
+
+<div class="app-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <a href="/" class="sidebar-brand">
+      <span class="brand-icon">🧘</span>
+      <span class="brand-name">ZenPose</span>
+    </a>
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-item">
+        <span class="ni">📊</span> Dashboard
+      </a>
+      <a href="/practice" class="nav-item active">
+        <span class="ni">🎯</span> Practice
+      </a>
+    </nav>
+    <!-- POSE SELECTOR in sidebar -->
+    <div class="sidebar-poses">
+      <div class="sp-label">Select Pose</div>
+      {% for pose in poses %}
+      <button class="sp-btn" data-pose="{{ pose }}" onclick="selectPose('{{ pose }}')">
+        {{ display_names[pose] }}
+      </button>
+      {% endfor %}
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-name">Loading...</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">⏻ Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN PRACTICE AREA -->
+  <main class="practice-main">
+    <!-- Header -->
+    <header class="practice-header">
+      <div>
+        <h1 class="page-title">Live Practice</h1>
+        <p class="page-sub" id="target-pose-label">Select a pose from the sidebar to begin</p>
+      </div>
+      <div class="practice-controls">
+        <button class="btn-outline" id="voice-toggle" onclick="toggleVoice()">🔊 Voice On</button>
+        <button class="btn-primary" id="camera-btn" onclick="toggleCamera()">📹 Start Camera</button>
+      </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <div class="practice-grid">
+
+      <!-- VIDEO PANEL -->
+      <div class="video-panel">
+        <div class="video-container" id="video-container">
+          <video id="user-video" autoplay playsinline muted></video>
+          <canvas id="overlay-canvas"></canvas>
+          <img id="annotated-overlay" class="hidden"/>
+          <div class="video-placeholder" id="video-placeholder">
+            <div class="vp-icon">📹</div>
+            <div class="vp-text">Camera Off</div>
+            <div class="vp-sub">Click "Start Camera" to begin</div>
+          </div>
+          <!-- Live badge -->
+          <div class="live-badge hidden" id="live-badge">
+            <span class="live-dot"></span> LIVE
+          </div>
+          <!-- Accuracy overlay -->
+          <div class="accuracy-overlay" id="accuracy-overlay">
+            <div class="acc-label">Accuracy</div>
+            <div class="acc-val" id="acc-val">–</div>
+          </div>
+        </div>
+
+        <!-- ACCURACY BAR -->
+        <div class="accuracy-bar-wrap">
+          <div class="ab-label">
+            <span>Pose Accuracy</span>
+            <span id="ab-pct">0%</span>
+          </div>
+          <div class="accuracy-bar">
+            <div class="ab-fill" id="ab-fill"></div>
+          </div>
+          <div class="ab-zones">
+            <span>Incorrect</span>
+            <span>Moderate</span>
+            <span>Perfect</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FEEDBACK PANEL -->
+      <div class="feedback-panel">
+
+        <!-- DETECTED POSE -->
+        <div class="feedback-card pose-detected-card">
+          <div class="pdc-header">
+            <span class="pdc-dot" id="pdc-dot"></span>
+            <span class="pdc-label">Detected Pose</span>
+          </div>
+          <div class="pdc-pose" id="detected-pose-name">Waiting...</div>
+          <div class="pdc-desc" id="detected-pose-desc">Start camera and select a target pose</div>
+        </div>
+
+        <!-- SCORE CARD -->
+        <div class="feedback-card score-card">
+          <div class="score-ring-wrap">
+            <svg class="score-ring" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" class="ring-bg"/>
+              <circle cx="60" cy="60" r="52" class="ring-fill" id="score-ring-fill"
+                      stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
+            </svg>
+            <div class="score-text">
+              <div class="score-num" id="score-num">0</div>
+              <div class="score-unit">%</div>
+            </div>
+          </div>
+          <div class="score-status" id="score-status">No pose detected</div>
+        </div>
+
+        <!-- VOICE FEEDBACK -->
+        <div class="feedback-card voice-card">
+          <div class="vc-header">
+            <span class="vc-icon" id="vc-icon">🔊</span>
+            <span class="vc-title">Voice Feedback</span>
+            <button class="vc-toggle" id="vc-toggle-btn" onclick="toggleVoice()">ON</button>
+          </div>
+          <div class="vc-message" id="vc-message">Voice feedback will guide your pose corrections.</div>
+        </div>
+
+        <!-- TEXT CUES -->
+        <div class="feedback-card cues-card">
+          <h3 class="cues-title">Pose Cues</h3>
+          <div class="cues-list" id="cues-list">
+            <div class="cue-item">Select a pose to see guidance cues</div>
+          </div>
+        </div>
+
+        <!-- CORRECTIONS -->
+        <div class="feedback-card corrections-card" id="corrections-card">
+          <h3 class="corrections-title">
+            <span class="ct-icon">⚠️</span> Corrections Needed
+          </h3>
+          <div class="corrections-list" id="corrections-list"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- REFERENCE POSE ROW -->
+    <div class="reference-section">
+      <h2 class="ref-title">Reference Poses</h2>
+      <div class="ref-grid">
+        {% for pose in poses %}
+        <div class="ref-card {% if loop.first %}active{% endif %}" id="ref-{{ pose }}" onclick="selectPose('{{ pose }}')">
+          <div class="ref-emoji">
+            {% set emojis = {
+              'tadasana':'🧍','vrikshasana':'🌲','warrior_i':'⚔️','warrior_ii':'🗡️',
+              'goddess':'🌟','downward_dog':'🐕','cobra':'🐍','plank':'📐',
+              'triangle':'🔺','child_pose':'🙏'
+            } %}
+            {{ emojis.get(pose, '🧘') }}
+          </div>
+          <div class="ref-name">{{ display_names[pose] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </main>
+</div>
+
+{% endblock %}
+{% block extra_js %}<script src="/static/js/practice.js"></script>{% endblock %}

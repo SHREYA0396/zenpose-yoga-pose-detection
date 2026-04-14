@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – ZenPose{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/dashboard.css"/>{% endblock %}
+{% block body %}
+
+<div class="app-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <a href="/" class="sidebar-brand">
+      <span class="brand-icon">🧘</span>
+      <span class="brand-name">ZenPose</span>
+    </a>
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-item active">
+        <span class="ni">📊</span> Dashboard
+      </a>
+      <a href="/practice" class="nav-item">
+        <span class="ni">🎯</span> Practice
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip" id="user-chip">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-name">Loading...</div>
+          <div class="user-email" id="sidebar-email">...</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">⏻ Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub" id="dash-greeting">Good morning! Ready to practice?</p>
+      </div>
+      <a href="/practice" class="btn-primary">
+        🎯 Start Practice
+      </a>
+    </header>
+
+    <!-- STATS ROW -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-val" id="stat-total">–</div>
+        <div class="stat-lbl">Total Sessions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-val" id="stat-best-pose">–</div>
+        <div class="stat-lbl">Best Pose</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-val" id="stat-avg">–</div>
+        <div class="stat-lbl">Avg Accuracy</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🧘</div>
+        <div class="stat-val" id="stat-poses">–</div>
+        <div class="stat-lbl">Poses Tried</div>
+      </div>
+    </div>
+
+    <!-- POSE PROGRESS + HISTORY -->
+    <div class="dash-grid">
+      <!-- Pose Progress -->
+      <div class="dash-card">
+        <h2 class="card-title">Pose Accuracy</h2>
+        <div id="pose-bars" class="pose-bars">
+          <div class="no-data">Start practicing to see your accuracy per pose.</div>
+        </div>
+      </div>
+
+      <!-- Recent History -->
+      <div class="dash-card">
+        <h2 class="card-title">Recent Sessions</h2>
+        <div id="history-list" class="history-list">
+          <div class="no-data">No sessions yet. <a href="/practice">Practice now →</a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALL 10 POSES -->
+    <div class="dash-card full-width">
+      <h2 class="card-title">Your Pose Library</h2>
+      <div class="pose-library">
+        {% set pose_data = [
+          ("🧍","tadasana","Tadasana","Mountain Pose"),
+          ("🌲","vrikshasana","Vrikshasana","Tree Pose"),
+          ("⚔️","warrior_i","Warrior I","Virabhadrasana I"),
+          ("🗡️","warrior_ii","Warrior II","Virabhadrasana II"),
+          ("🌟","goddess","Goddess","Utkata Konasana"),
+          ("🐕","downward_dog","Downward Dog","Adho Mukha"),
+          ("🐍","cobra","Cobra","Bhujangasana"),
+          ("📐","plank","Plank","Phalakasana"),
+          ("🔺","triangle","Triangle","Trikonasana"),
+          ("🙏","child_pose","Child's Pose","Balasana"),
+        ] %}
+        {% for emoji, key, name, sanskrit in pose_data %}
+        <div class="pose-lib-card" data-pose="{{ key }}">
+          <div class="plc-emoji">{{ emoji }}</div>
+          <div class="plc-name">{{ name }}</div>
+          <div class="plc-sanskrit">{{ sanskrit }}</div>
+          <div class="plc-acc" id="acc-{{ key }}">–</div>
+          <a href="/practice?pose={{ key }}" class="plc-practice">Practice</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </main>
+</div>
+
+{% endblock %}
+{% block extra_js %}<script src="/static/js/dashboard.js"></script>{% endblock %}

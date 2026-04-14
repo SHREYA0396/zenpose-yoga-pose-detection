@@ -1,0 +1,146 @@
+/* ─── AUTH PAGE ──────────────────────────────────────────────── */
+.auth-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* LEFT */
+.auth-left {
+  width: 420px;
+  flex-shrink: 0;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-left-bg { position:absolute;inset:0;pointer-events:none; }
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 48px;
+}
+.auth-left-content { position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center; }
+
+.auth-pose-display { display:flex;justify-content:center;margin-bottom:32px; }
+.auth-pose-ring {
+  width: 140px;height:140px;
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.auth-pose-emoji { font-size:3.5rem; position:relative;z-index:2; }
+
+.auth-left-title { font-size:1.8rem;font-weight:300;text-align:center;margin-bottom:12px; }
+.auth-left-sub { color:var(--text-2);font-size:0.875rem;text-align:center;line-height:1.6;margin-bottom:32px; }
+
+.auth-benefits { display:flex;flex-direction:column;gap:12px; }
+.benefit { display:flex;align-items:center;gap:10px;font-size:0.85rem;color:var(--text-2); }
+.b-check { color:var(--green);font-weight:700;font-size:1rem; }
+
+/* RIGHT */
+.auth-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: var(--bg);
+}
+.auth-form-wrap { width:100%;max-width:420px; }
+
+.auth-step { display:none; }
+.auth-step.active { display:block; }
+
+.auth-title { font-size:2.2rem;font-weight:300;margin-bottom:8px; }
+.auth-subtitle { color:var(--text-2);font-size:0.9rem;margin-bottom:32px; }
+
+/* FORM */
+.auth-form { display:flex;flex-direction:column;gap:18px; }
+.form-group { display:flex;flex-direction:column;gap:6px; }
+.form-group label { font-size:0.8rem;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.06em; }
+
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-icon { position:absolute;left:14px;font-size:0.9rem;pointer-events:none; }
+.input-wrap input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  padding: 13px 44px 13px 42px;
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-wrap input:focus { border-color: var(--green); }
+.input-wrap input::placeholder { color:var(--text-3); }
+.pw-toggle {
+  position:absolute;right:14px;
+  background:none;border:none;color:var(--text-3);
+  cursor:pointer;font-size:0.9rem;padding:4px;
+  transition:color 0.2s;
+}
+.pw-toggle:hover { color:var(--text); }
+
+.auth-error {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.auth-switch { margin-top:24px;text-align:center;font-size:0.875rem;color:var(--text-2); }
+.auth-link { color:var(--green-light);font-weight:600; }
+.auth-link:hover { text-decoration:underline; }
+
+/* OTP STEP */
+.otp-icon { font-size:3.5rem;margin-bottom:16px; }
+.otp-inputs {
+  display: flex;
+  gap: 10px;
+  margin: 24px 0;
+  justify-content: center;
+}
+.otp-box {
+  width: 52px;height:58px;
+  background: var(--bg-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s;
+  font-family: var(--font-serif);
+}
+.otp-box:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
+}
+.otp-box.filled { border-color: var(--green-light); color: var(--green-light); }
+
+.otp-resend { margin-top:20px;text-align:center;font-size:0.8rem;color:var(--text-3); }
+.resend-btn {
+  background:none;border:none;color:var(--green-light);
+  cursor:pointer;font-size:0.8rem;font-weight:600;
+  text-decoration:underline;margin-left:6px;
+}
+.resend-btn:disabled { color:var(--text-3);text-decoration:none;cursor:default; }
+
+@media (max-width:768px) {
+  .auth-wrapper { flex-direction:column; }
+  .auth-left { width:100%;height:auto; }
+}

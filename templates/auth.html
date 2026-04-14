@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Login' if page=='login' else 'Register' }} – ZenPose{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/auth.css"/>{% endblock %}
+{% block body %}
+
+<div class="auth-wrapper">
+  <!-- LEFT PANEL -->
+  <div class="auth-left">
+    <div class="auth-left-bg">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+    </div>
+    <a href="/" class="auth-brand">
+      <span class="brand-icon">🧘</span>
+      <span class="brand-name">ZenPose</span>
+    </a>
+    <div class="auth-left-content">
+      <div class="auth-pose-display">
+        <div class="auth-pose-ring">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <span class="auth-pose-emoji">🧘‍♀️</span>
+        </div>
+      </div>
+      <h2 class="auth-left-title">Your AI Yoga Trainer</h2>
+      <p class="auth-left-sub">Real-time pose detection. Voice feedback. 10 poses mastered together.</p>
+      <div class="auth-benefits">
+        <div class="benefit"><span class="b-check">✓</span> Real-time pose correction</div>
+        <div class="benefit"><span class="b-check">✓</span> Voice + text guidance</div>
+        <div class="benefit"><span class="b-check">✓</span> Progress tracking</div>
+        <div class="benefit"><span class="b-check">✓</span> Secure OTP login</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="auth-right">
+    <div class="auth-form-wrap">
+
+      <!-- STEP 1: REGISTER -->
+      <div id="step-register" class="auth-step {% if page == 'register' %}active{% endif %}">
+        <h1 class="auth-title">Create Account</h1>
+        <p class="auth-subtitle">Start your yoga journey with ZenPose</p>
+        <form id="registerForm" class="auth-form" onsubmit="return false">
+          <div class="form-group">
+            <label>Full Name</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="reg-name" placeholder="Your full name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="reg-email" placeholder="you@example.com" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="reg-password" placeholder="Min 6 characters" required/>
+              <button type="button" class="pw-toggle" onclick="togglePw('reg-password', this)">👁</button>
+            </div>
+          </div>
+          <div id="reg-error" class="auth-error hidden"></div>
+          <button type="submit" class="btn-primary btn-full" onclick="handleRegister()">
+            <span id="reg-btn-text">Create Account & Send OTP</span>
+            <span id="reg-spinner" class="spinner hidden"></span>
+          </button>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="/login" class="auth-link">Login</a></p>
+      </div>
+
+      <!-- STEP 2: OTP (register) -->
+      <div id="step-otp-register" class="auth-step {% if page == 'otp-register' %}active{% endif %}">
+        <div class="otp-icon">📧</div>
+        <h1 class="auth-title">Verify Email</h1>
+        <p class="auth-subtitle" id="otp-reg-subtitle">Enter the 6-digit code sent to your email</p>
+        <div class="otp-inputs">
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+        </div>
+        <div id="otp-reg-error" class="auth-error hidden"></div>
+        <button class="btn-primary btn-full" onclick="handleVerifyRegisterOTP()">
+          <span id="otp-reg-btn-text">Verify & Create Account</span>
+          <span id="otp-reg-spinner" class="spinner hidden"></span>
+        </button>
+        <div class="otp-resend">
+          Didn't get it? <button class="resend-btn" id="resend-reg-btn" onclick="resendOTP('register')">Resend OTP</button>
+          <span id="resend-reg-timer" class="hidden"></span>
+        </div>
+      </div>
+
+      <!-- STEP 1: LOGIN -->
+      <div id="step-login" class="auth-step {% if page == 'login' %}active{% endif %}">
+        <h1 class="auth-title">Welcome Back</h1>
+        <p class="auth-subtitle">Login to continue your practice</p>
+        <form id="loginForm" class="auth-form" onsubmit="return false">
+          <div class="form-group">
+            <label>Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="login-email" placeholder="you@example.com" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="login-password" placeholder="Your password" required/>
+              <button type="button" class="pw-toggle" onclick="togglePw('login-password', this)">👁</button>
+            </div>
+          </div>
+          <div id="login-error" class="auth-error hidden"></div>
+          <button type="submit" class="btn-primary btn-full" onclick="handleLogin()">
+            <span id="login-btn-text">Login & Send OTP</span>
+            <span id="login-spinner" class="spinner hidden"></span>
+          </button>
+        </form>
+        <p class="auth-switch">No account? <a href="/register" class="auth-link">Register free</a></p>
+      </div>
+
+      <!-- STEP 2: OTP (login) -->
+      <div id="step-otp-login" class="auth-step">
+        <div class="otp-icon">🔐</div>
+        <h1 class="auth-title">Enter OTP</h1>
+        <p class="auth-subtitle" id="otp-login-subtitle">6-digit code sent to your email</p>
+        <div class="otp-inputs" id="login-otp-inputs">
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+          <input class="otp-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]"/>
+        </div>
+        <div id="otp-login-error" class="auth-error hidden"></div>
+        <button class="btn-primary btn-full" onclick="handleVerifyLoginOTP()">
+          <span id="otp-login-btn-text">Verify & Login</span>
+          <span id="otp-login-spinner" class="spinner hidden"></span>
+        </button>
+        <div class="otp-resend">
+          Didn't get it? <button class="resend-btn" id="resend-login-btn" onclick="resendOTP('login')">Resend OTP</button>
+          <span id="resend-login-timer" class="hidden"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}<script src="/static/js/auth.js"></script>{% endblock %}

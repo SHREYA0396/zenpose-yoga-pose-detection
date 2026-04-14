@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}ZenPose – AI Yoga Trainer{% endblock %}
+{% block body %}
+
+<div class="landing">
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <span class="brand-icon">🧘</span>
+      <span class="brand-name">ZenPose</span>
+    </div>
+    <div class="nav-links">
+      <a href="/login" class="nav-link">Login</a>
+      <a href="/register" class="btn-primary">Get Started</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+      <div class="grid-overlay"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        AI-Powered Yoga Detection
+      </div>
+      <h1 class="hero-title">
+        Practice Yoga<br/>
+        <span class="text-accent">Perfectly.</span>
+      </h1>
+      <p class="hero-sub">
+        ZenPose uses real-time computer vision and machine learning to analyze 
+        your yoga poses, correct your form, and guide your practice — like 
+        having a personal trainer at home.
+      </p>
+      <div class="hero-cta">
+        <a href="/register" class="btn-primary btn-lg">
+          Start Free Practice
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#poses" class="btn-ghost btn-lg">View 10 Poses</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-n">10</span><span class="stat-l">Yoga Poses</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><span class="stat-n">95%</span><span class="stat-l">Accuracy</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><span class="stat-n">Real-Time</span><span class="stat-l">Feedback</span></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="pose-card-hero">
+        <div class="pose-ring">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <div class="ring r3"></div>
+          <div class="pose-emoji">🧘‍♀️</div>
+        </div>
+        <div class="hero-detect-badge">
+          <div class="detect-dot pulse"></div>
+          <div>
+            <div class="detect-pose">Warrior II</div>
+            <div class="detect-acc">97.3% accuracy</div>
+          </div>
+        </div>
+        <div class="hero-feedback-chip">✓ Perfect alignment detected</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works" id="how">
+    <div class="section-inner">
+      <h2 class="section-title">How ZenPose Works</h2>
+      <p class="section-sub">Three steps to perfect yoga practice</p>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">01</div>
+          <div class="step-icon">📹</div>
+          <h3>Open Webcam</h3>
+          <p>ZenPose uses your device camera to capture live video — no special equipment needed.</p>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-card">
+          <div class="step-num">02</div>
+          <div class="step-icon">🤖</div>
+          <h3>AI Detection</h3>
+          <p>MediaPipe extracts 33 body landmarks. Our ML model classifies your pose in real time.</p>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-card">
+          <div class="step-num">03</div>
+          <div class="step-icon">🎙️</div>
+          <h3>Voice + Text Feedback</h3>
+          <p>Receive instant correction tips via voice and on-screen text. Improve every session.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 POSES -->
+  <section class="poses-section" id="poses">
+    <div class="section-inner">
+      <h2 class="section-title">10 Yoga Poses</h2>
+      <p class="section-sub">ZenPose detects and corrects all these poses in real time</p>
+      <div class="poses-grid">
+        {% set poses = [
+          ("🧍", "Tadasana", "Mountain Pose", "Foundation of all standing poses. Builds balance and posture."),
+          ("🌲", "Vrikshasana", "Tree Pose", "One-legged balance. Builds focus and hip flexibility."),
+          ("⚔️", "Warrior I", "Virabhadrasana I", "Front knee bent, arms raised. Builds leg and core strength."),
+          ("🗡️", "Warrior II", "Virabhadrasana II", "Arms extended wide. Opens hips and chest."),
+          ("🌟", "Goddess", "Utkata Konasana", "Wide squat, arms open. Strengthens thighs and core."),
+          ("🐕", "Downward Dog", "Adho Mukha Svanasana", "Inverted V-shape. Stretches hamstrings and spine."),
+          ("🐍", "Cobra", "Bhujangasana", "Chest lifted, back arched. Strengthens spine and arms."),
+          ("📐", "Plank", "Phalakasana", "Full body straight line. Builds core and arm strength."),
+          ("🔺", "Triangle", "Trikonasana", "Extended side stretch. Opens hips and lengthens spine."),
+          ("🙏", "Child's Pose", "Balasana", "Restful forward fold. Releases tension and calms mind."),
+        ] %}
+        {% for emoji, name, sanskrit, desc in poses %}
+        <div class="pose-card">
+          <div class="pose-card-emoji">{{ emoji }}</div>
+          <h3 class="pose-card-name">{{ name }}</h3>
+          <div class="pose-card-sanskrit">{{ sanskrit }}</div>
+          <p class="pose-card-desc">{{ desc }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features-section">
+    <div class="section-inner">
+      <h2 class="section-title">What Makes ZenPose Different</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="f-icon">🎙️</div>
+          <h3>Voice Guidance</h3>
+          <p>Real-time voice instructions: "Raise your arms higher", "Straighten your back" — hands-free correction.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">📊</div>
+          <h3>Progress Tracking</h3>
+          <p>Track accuracy per pose over sessions. See your improvement curve and streak data.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">🔒</div>
+          <h3>Secure with OTP</h3>
+          <p>Email OTP-based authentication for both login and registration. Your data stays yours.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">⚡</div>
+          <h3>Real-Time, 100ms</h3>
+          <p>Under 300ms latency for pose detection. Feedback arrives fast enough to actually help.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">🏠</div>
+          <h3>Practice Anywhere</h3>
+          <p>Just a webcam and a browser. No app download, no gym, no trainer required.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">🧠</div>
+          <h3>ML-Powered</h3>
+          <p>Random Forest classifier trained on 4000+ pose samples. Joint angle analysis for precision.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-inner">
+      <h2>Ready to Perfect Your Practice?</h2>
+      <p>Join ZenPose and start getting real-time AI feedback on your yoga today.</p>
+      <a href="/register" class="btn-primary btn-lg">Create Free Account</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="brand-icon">🧘</span>
+        <span class="brand-name">ZenPose</span>
+      </div>
+      <p class="footer-copy">© 2025 ZenPose. Built with MediaPipe, Flask & Machine Learning.</p>
+    </div>
+  </footer>
+</div>
+
+{% endblock %}
