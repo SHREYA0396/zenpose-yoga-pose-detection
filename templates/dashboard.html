@@ -11,19 +11,15 @@
       <span class="brand-name">ZenPose</span>
     </a>
     <nav class="sidebar-nav">
-      <a href="/dashboard" class="nav-item active">
-        <span class="ni">📊</span> Dashboard
-      </a>
-      <a href="/practice" class="nav-item">
-        <span class="ni">🎯</span> Practice
-      </a>
+      <a href="/dashboard" class="nav-item active"><span class="ni">📊</span> Dashboard</a>
+      <a href="/practice"  class="nav-item"><span class="ni">🎯</span> Practice</a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-chip" id="user-chip">
+      <div class="user-chip">
         <div class="user-avatar" id="user-avatar">U</div>
         <div class="user-info">
-          <div class="user-name" id="sidebar-name">Loading...</div>
-          <div class="user-email" id="sidebar-email">...</div>
+          <div class="user-name"  id="sidebar-name">Loading…</div>
+          <div class="user-email" id="sidebar-email">…</div>
         </div>
       </div>
       <button class="logout-btn" onclick="logout()">⏻ Logout</button>
@@ -37,83 +33,108 @@
         <h1 class="page-title">Dashboard</h1>
         <p class="page-sub" id="dash-greeting">Good morning! Ready to practice?</p>
       </div>
-      <a href="/practice" class="btn-primary">
-        🎯 Start Practice
-      </a>
+      <a href="/practice" class="btn-primary">🎯 Start Practice</a>
     </header>
 
-    <!-- STATS ROW -->
+    <!-- TOP STATS -->
     <div class="stats-row" id="stats-row">
       <div class="stat-card">
         <div class="stat-icon">🎯</div>
         <div class="stat-val" id="stat-total">–</div>
-        <div class="stat-lbl">Total Sessions</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">🏆</div>
-        <div class="stat-val" id="stat-best-pose">–</div>
-        <div class="stat-lbl">Best Pose</div>
+        <div class="stat-lbl">Total Detections</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">📈</div>
         <div class="stat-val" id="stat-avg">–</div>
         <div class="stat-lbl">Avg Accuracy</div>
       </div>
+      <div class="stat-card streak-card">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-val" id="stat-streak">–</div>
+        <div class="stat-lbl">Current Streak</div>
+        <div class="streak-max" id="streak-max-label"></div>
+      </div>
       <div class="stat-card">
         <div class="stat-icon">🧘</div>
         <div class="stat-val" id="stat-poses">–</div>
-        <div class="stat-lbl">Poses Tried</div>
+        <div class="stat-lbl">Poses Practised</div>
       </div>
     </div>
 
-    <!-- POSE PROGRESS + HISTORY -->
+    <!-- CHARTS ROW -->
+    <div class="charts-row">
+      <!-- Weekly Accuracy -->
+      <div class="dash-card chart-card">
+        <div class="card-header">
+          <h2 class="card-title">Weekly Accuracy</h2>
+          <span class="card-sub">Last 7 days</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="weeklyChart"></canvas>
+        </div>
+        <div class="no-data hidden" id="weekly-nodata">Practice to see your weekly trend.</div>
+      </div>
+
+      <!-- Pose Accuracy Bar -->
+      <div class="dash-card chart-card">
+        <div class="card-header">
+          <h2 class="card-title">Pose Accuracy</h2>
+          <span class="card-sub">All poses tried</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="poseChart"></canvas>
+        </div>
+        <div class="no-data hidden" id="pose-nodata">No pose data yet. Start practicing!</div>
+      </div>
+    </div>
+
+    <!-- RECOMMENDATIONS + HISTORY -->
     <div class="dash-grid">
-      <!-- Pose Progress -->
+      <!-- Recommendations -->
       <div class="dash-card">
-        <h2 class="card-title">Pose Accuracy</h2>
-        <div id="pose-bars" class="pose-bars">
-          <div class="no-data">Start practicing to see your accuracy per pose.</div>
+        <div class="card-header">
+          <h2 class="card-title">💡 Recommended for You</h2>
+          <span class="card-sub">Based on your performance</span>
+        </div>
+        <div id="recommendations-list" class="rec-list">
+          <div class="no-data">Start practicing to get personalized recommendations.</div>
         </div>
       </div>
 
       <!-- Recent History -->
       <div class="dash-card">
-        <h2 class="card-title">Recent Sessions</h2>
+        <div class="card-header">
+          <h2 class="card-title">Recent Sessions</h2>
+          <span class="card-sub">Last 30 detections</span>
+        </div>
         <div id="history-list" class="history-list">
           <div class="no-data">No sessions yet. <a href="/practice">Practice now →</a></div>
         </div>
       </div>
     </div>
 
-    <!-- ALL 10 POSES -->
+    <!-- POSE LIBRARY (25 poses) -->
     <div class="dash-card full-width">
-      <h2 class="card-title">Your Pose Library</h2>
-      <div class="pose-library">
-        {% set pose_data = [
-          ("🧍","tadasana","Tadasana","Mountain Pose"),
-          ("🌲","vrikshasana","Vrikshasana","Tree Pose"),
-          ("⚔️","warrior_i","Warrior I","Virabhadrasana I"),
-          ("🗡️","warrior_ii","Warrior II","Virabhadrasana II"),
-          ("🌟","goddess","Goddess","Utkata Konasana"),
-          ("🐕","downward_dog","Downward Dog","Adho Mukha"),
-          ("🐍","cobra","Cobra","Bhujangasana"),
-          ("📐","plank","Plank","Phalakasana"),
-          ("🔺","triangle","Triangle","Trikonasana"),
-          ("🙏","child_pose","Child's Pose","Balasana"),
-        ] %}
-        {% for emoji, key, name, sanskrit in pose_data %}
-        <div class="pose-lib-card" data-pose="{{ key }}">
-          <div class="plc-emoji">{{ emoji }}</div>
-          <div class="plc-name">{{ name }}</div>
-          <div class="plc-sanskrit">{{ sanskrit }}</div>
-          <div class="plc-acc" id="acc-{{ key }}">–</div>
-          <a href="/practice?pose={{ key }}" class="plc-practice">Practice</a>
+      <div class="card-header">
+        <h2 class="card-title">Your Pose Library</h2>
+        <div class="cat-filters" id="cat-filters">
+          <button class="cat-btn active" onclick="filterPoses('all',this)">All</button>
+          <button class="cat-btn" onclick="filterPoses('Standing',this)">Standing</button>
+          <button class="cat-btn" onclick="filterPoses('Balance',this)">Balance</button>
+          <button class="cat-btn" onclick="filterPoses('Core',this)">Core</button>
+          <button class="cat-btn" onclick="filterPoses('Backbend',this)">Backbend</button>
+          <button class="cat-btn" onclick="filterPoses('Restorative',this)">Restorative</button>
         </div>
-        {% endfor %}
+      </div>
+      <div class="pose-library" id="pose-library">
+        <!-- Populated by JS -->
       </div>
     </div>
   </main>
 </div>
 
 {% endblock %}
-{% block extra_js %}<script src="/static/js/dashboard.js"></script>{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

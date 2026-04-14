@@ -215,3 +215,33 @@
 .ref-emoji { font-size: 1.6rem; margin-bottom: 6px; }
 .ref-name { font-size: 0.7rem; color: var(--text-2); line-height: 1.3; }
 .ref-card.active .ref-name { color: var(--green-light); }
+
+/* ─── 25-POSE ADDITIONS ────────────────────────────────────────── */
+.pose-count-badge {
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.25);
+  color: var(--green-light);
+  font-size: 0.75rem; font-weight: 700;
+  padding: 5px 12px; border-radius: 20px;
+}
+.difficulty-badge {
+  position: absolute; bottom: 14px; left: 14px;
+  background: rgba(212,168,83,0.88);
+  color: #000; font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.08em; padding: 4px 10px; border-radius: 6px;
+}
+.sp-category {
+  font-size: 0.6rem; color: var(--gold);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  padding: 10px 10px 3px; font-weight: 700;
+}
+.pdc-benefits {
+  margin-top: 8px; font-size: 0.75rem; color: var(--green-light);
+  border-top: 1px solid var(--border); padding-top: 8px;
+}
+.ref-category-label {
+  font-size: 0.72rem; color: var(--gold); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin: 16px 0 6px;
+}
+.ref-title { font-size: 1.1rem; font-weight: 500; margin-bottom: 4px; color: var(--text-2); }

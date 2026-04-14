@@ -1,6 +1,7 @@
 """
-ZenPose – Flask Backend
-Handles: Auth (register/login/OTP), Pose Detection API, Session Management
+ZenPose — Enhanced Flask Backend
+Features: 25 poses, streak tracking, session timer, performance analytics,
+          pose recommendations, real SMTP OTP with proper error handling.
 """
 
 import os, pickle, random, time, base64, smtplib, json, sqlite3, hashlib, secrets
@@ -12,41 +13,39 @@ from functools import wraps
 import numpy as np
 import cv2
 from flask import (Flask, render_template, request, jsonify,
-                   session, redirect, url_for, g)
+                   session, redirect, g)
 
-# ─── MEDIAPIPE (optional graceful fallback) ────────────────────────────────────
+# ─── MEDIAPIPE ────────────────────────────────────────────────────────────────
 try:
     import mediapipe as mp
     MP_AVAILABLE = True
-    mp_pose = mp.solutions.pose
-    mp_drawing = mp.solutions.drawing_utils
+    mp_pose     = mp.solutions.pose
+    mp_drawing  = mp.solutions.drawing_utils
     pose_detector = mp_pose.Pose(
-        static_image_mode=False,
-        model_complexity=1,
+        static_image_mode=False, model_complexity=1,
         enable_segmentation=False,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5
+        min_detection_confidence=0.5, min_tracking_confidence=0.5,
     )
 except Exception:
     MP_AVAILABLE = False
-    print("[WARN] MediaPipe not available – using simulation mode")
+    print("[WARN] MediaPipe unavailable — simulation mode")
 
 # ─── LOAD MODELS ──────────────────────────────────────────────────────────────
-with open('models/zenpose_model.pkl', 'rb') as f:
-    ML_MODEL = pickle.load(f)
-with open('models/label_encoder.pkl', 'rb') as f:
-    LABEL_ENC = pickle.load(f)
-with open('models/pose_metadata.pkl', 'rb') as f:
-    META = pickle.load(f)
+with open('models/zenpose_model.pkl',  'rb') as f: ML_MODEL  = pickle.load(f)
+with open('models/label_encoder.pkl', 'rb') as f: LABEL_ENC = pickle.load(f)
+with open('models/pose_metadata.pkl', 'rb') as f: META      = pickle.load(f)
 
-POSE_FEEDBACK = META['feedback']
-POSE_LABELS   = META['labels']
-DISPLAY_NAMES = META['display_names']
+POSE_LABELS    = META['labels']
+DISPLAY_NAMES  = META['display_names']
+POSE_FEEDBACK  = META['feedback']
+POSE_EMOJIS    = META.get('emojis', {})
+POSE_CATEGORIES= META.get('categories', {})
 
-# ─── FLASK APP ─────────────────────────────────────────────────────────────────
+# ─── FLASK ────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 DB_PATH = 'zenpose.db'
@@ -66,97 +65,190 @@ def init_db():
     db = sqlite3.connect(DB_PATH)
     db.executescript("""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            name          TEXT NOT NULL,
+            email         TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            is_verified INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            is_verified   INTEGER DEFAULT 0,
+            created_at    TEXT DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS otp_store (
-            email TEXT PRIMARY KEY,
-            otp TEXT NOT NULL,
-            purpose TEXT NOT NULL,
-            expires_at REAL NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS sessions (
-            token TEXT PRIMARY KEY,
-            user_id INTEGER NOT NULL,
+            email      TEXT PRIMARY KEY,
+            otp        TEXT NOT NULL,
+            purpose    TEXT NOT NULL,
             expires_at REAL NOT NULL
         );
         CREATE TABLE IF NOT EXISTS pose_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            pose_name TEXT NOT NULL,
-            accuracy REAL NOT NULL,
-            detected_at TEXT DEFAULT CURRENT_TIMESTAMP
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id        INTEGER NOT NULL,
+            pose_name      TEXT NOT NULL,
+            accuracy       REAL NOT NULL,
+            is_correct     INTEGER DEFAULT 0,
+            hold_seconds   REAL DEFAULT 0,
+            detected_at    TEXT DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS sessions (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id      INTEGER NOT NULL,
+            pose_name    TEXT    NOT NULL DEFAULT '',
+            duration_sec REAL    NOT NULL DEFAULT 0,
+            avg_accuracy REAL    NOT NULL DEFAULT 0,
+            max_streak   INTEGER DEFAULT 0,
+            created_at   TEXT    DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS streaks (
+            user_id        INTEGER PRIMARY KEY,
+            current_streak INTEGER DEFAULT 0,
+            max_streak     INTEGER DEFAULT 0,
+            last_pose      TEXT DEFAULT '',
+            updated_at     TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        -- Add new columns to existing tables if upgrading
+        PRAGMA foreign_keys = ON;
     """)
+    # Safe column additions for existing DBs
+    for col_sql in [
+        "ALTER TABLE pose_history ADD COLUMN is_correct INTEGER DEFAULT 0",
+        "ALTER TABLE pose_history ADD COLUMN hold_seconds REAL DEFAULT 0",
+    ]:
+        try: db.execute(col_sql)
+        except: pass
     db.commit()
     db.close()
 
 init_db()
 
-# ─── HELPERS ──────────────────────────────────────────────────────────────────
+# ─── EMAIL / OTP ──────────────────────────────────────────────────────────────
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
 def generate_otp():
     return str(random.randint(100000, 999999))
 
-def send_otp_email(to_email, otp, purpose="verification"):
-    """Send OTP via Gmail SMTP. Returns True on success, False on failure."""
-    subject = "ZenPose – Your OTP Code"
-    purpose_label = purpose.replace('_', ' ').title()
-    body = f"""
-    <html><body style="font-family:sans-serif;background:#0a0a0a;color:#fff;padding:30px;">
-    <div style="max-width:500px;margin:auto;background:#111;border-radius:16px;padding:30px;border:1px solid #22c55e33;">
-      <h2 style="color:#22c55e;">🧘 ZenPose</h2>
-      <h3>Your Verification Code</h3>
-      <p>Your OTP for <strong>{purpose_label}</strong>:</p>
-      <div style="font-size:42px;letter-spacing:12px;color:#22c55e;font-weight:bold;padding:20px 0;">{otp}</div>
-      <p style="color:#888;font-size:12px;">This code expires in 10 minutes. Do not share it with anyone.</p>
-    </div></body></html>
+def send_otp_email(to_email: str, otp: str, purpose: str = "verification") -> dict:
     """
-    # Configure EMAIL_USER and EMAIL_PASS (Google App Password) in environment.
-    user = os.environ.get('EMAIL_USER')
-    pwd  = os.environ.get('EMAIL_PASS')
-    if not user or not pwd:
-        print("[OTP Error] EMAIL_USER or EMAIL_PASS not configured")
-        return False
+    Send OTP via Gmail SMTP (SSL port 465).
+    Requires env vars: EMAIL_USER, EMAIL_PASS (Gmail App Password).
+    Returns {'sent': bool, 'method': 'smtp'|'console', 'error': str|None}
+    """
+    subject = f"ZenPose — Your OTP: {otp}"
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#080a0b;font-family:'DM Sans',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table width="520" cellpadding="0" cellspacing="0"
+             style="background:#0e1114;border-radius:20px;border:1px solid rgba(34,197,94,0.2);overflow:hidden;">
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#0e1114,#141920);padding:32px;text-align:center;">
+            <div style="font-size:36px;margin-bottom:10px;">🧘</div>
+            <h1 style="margin:0;color:#22c55e;font-family:Georgia,serif;font-size:26px;font-weight:300;">ZenPose</h1>
+            <p style="margin:6px 0 0;color:#9ba8a0;font-size:13px;">AI Yoga Pose Detection</p>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:36px 40px;">
+            <h2 style="margin:0 0 16px;color:#f0f4f0;font-size:20px;font-weight:500;">
+              Your Verification Code
+            </h2>
+            <p style="margin:0 0 24px;color:#9ba8a0;font-size:14px;line-height:1.6;">
+              Use this code to complete your <strong style="color:#f0f4f0;">{purpose}</strong>.
+              It expires in <strong style="color:#22c55e;">10 minutes</strong>.
+            </p>
+            <!-- OTP Box -->
+            <div style="background:#141920;border:2px solid rgba(34,197,94,0.35);border-radius:16px;
+                        padding:28px;text-align:center;margin:0 0 28px;">
+              <div style="font-family:Georgia,serif;font-size:52px;font-weight:700;
+                          letter-spacing:18px;color:#22c55e;line-height:1;">{otp}</div>
+            </div>
+            <p style="margin:0;color:#5a6662;font-size:12px;line-height:1.6;">
+              🔒 Never share this code with anyone.<br/>
+              If you didn't request this, you can safely ignore this email.
+            </p>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="background:#080a0b;padding:20px 40px;border-top:1px solid rgba(255,255,255,0.05);">
+            <p style="margin:0;color:#5a6662;font-size:11px;text-align:center;">
+              © 2025 ZenPose · AI Yoga Trainer · This is an automated message
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
 
-    try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From']    = user
-        msg['To']      = to_email
-        msg.attach(MIMEText(body, 'html'))
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=15) as s:
-            s.login(user, pwd)
-            s.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"[SMTP Error] {e}")
-        return False
+    email_user = os.environ.get('EMAIL_USER', '').strip()
+    email_pass = os.environ.get('EMAIL_PASS', '').strip()
+
+    if email_user and email_pass:
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From']    = f"ZenPose <{email_user}>"
+            msg['To']      = to_email
+            msg['Reply-To']= email_user
+            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
+                server.login(email_user, email_pass)
+                server.sendmail(email_user, [to_email], msg.as_string())
+
+            print(f"[EMAIL ✓] OTP sent to {to_email} via SMTP [{purpose}]")
+            return {'sent': True, 'method': 'smtp', 'error': None}
+
+        except smtplib.SMTPAuthenticationError:
+            err = "Gmail authentication failed. Check EMAIL_USER and EMAIL_PASS (use App Password, not account password)."
+            print(f"[EMAIL ✗] SMTP Auth Error: {err}")
+        except smtplib.SMTPRecipientsRefused:
+            err = f"Recipient address refused: {to_email}"
+            print(f"[EMAIL ✗] {err}")
+        except smtplib.SMTPException as e:
+            err = f"SMTP error: {str(e)}"
+            print(f"[EMAIL ✗] {err}")
+        except OSError as e:
+            err = f"Network error sending email: {str(e)}"
+            print(f"[EMAIL ✗] {err}")
+        except Exception as e:
+            err = f"Unexpected error: {str(e)}"
+            print(f"[EMAIL ✗] {err}")
+
+        # SMTP failed — fall through to console
+        print(f"\n{'─'*50}")
+        print(f"  FALLBACK OTP for {to_email} [{purpose}]: {otp}")
+        print(f"{'─'*50}\n")
+        return {'sent': False, 'method': 'console', 'error': err}
+
+    else:
+        # No SMTP config — console mode (development)
+        print(f"\n{'═'*50}")
+        print(f"  [DEV MODE] OTP for {to_email} [{purpose}]: {otp}")
+        print(f"  (Set EMAIL_USER + EMAIL_PASS env vars for real email)")
+        print(f"{'═'*50}\n")
+        return {'sent': True, 'method': 'console', 'error': None}
 
 def store_otp(email, otp, purpose):
     db = get_db()
-    db.execute(
-        "INSERT OR REPLACE INTO otp_store VALUES (?,?,?,?)",
-        (email, otp, purpose, time.time() + 600)
-    )
+    db.execute("INSERT OR REPLACE INTO otp_store VALUES (?,?,?,?)",
+               (email, otp, purpose, time.time() + 600))
     db.commit()
 
 def verify_otp(email, otp, purpose):
-    db = get_db()
+    db  = get_db()
     row = db.execute(
         "SELECT * FROM otp_store WHERE email=? AND otp=? AND purpose=?",
-        (email, otp, purpose)
-    ).fetchone()
-    if not row:
-        return False, "Invalid OTP"
+        (email, otp, purpose)).fetchone()
+    if not row:    return False, "Invalid OTP. Please check the code and try again."
     if time.time() > row['expires_at']:
-        return False, "OTP expired"
+        db.execute("DELETE FROM otp_store WHERE email=?", (email,))
+        db.commit()
+        return False, "OTP has expired. Please request a new one."
     db.execute("DELETE FROM otp_store WHERE email=?", (email,))
     db.commit()
     return True, "OK"
@@ -169,185 +261,232 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ─── POSE DETECTION ───────────────────────────────────────────────────────────
-def calculate_angle(a, b, c):
-    """Calculate angle at joint b given three landmark points."""
-    a, b, c = np.array(a), np.array(b), np.array(c)
-    ba = a - b
-    bc = c - b
-    cos_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-8)
-    return np.degrees(np.arccos(np.clip(cos_angle, -1.0, 1.0)))
-
+# ─── POSE HELPERS ─────────────────────────────────────────────────────────────
 def extract_keypoints(landmarks):
-    """Flatten 33 MediaPipe landmarks into 132-dim feature vector."""
     kp = []
     for lm in landmarks.landmark:
         kp.extend([lm.x, lm.y, lm.z, lm.visibility])
     return np.array(kp)
 
-def get_pose_feedback(pose_name, landmarks=None):
-    """Return pose-specific feedback based on key joint angles."""
+def get_pose_feedback(pose_name):
     fb = POSE_FEEDBACK.get(pose_name, {})
-    corrections = []
-
-    if landmarks and pose_name == "warrior_i":
-        try:
-            lm = landmarks.landmark
-            # Check front knee angle
-            hip   = [lm[23].x, lm[23].y]
-            knee  = [lm[25].x, lm[25].y]
-            ankle = [lm[27].x, lm[27].y]
-            angle = calculate_angle(hip, knee, ankle)
-            if angle > 130:
-                corrections.append(fb['corrections'].get('knee_not_bent', ''))
-        except:
-            pass
-
-    if not corrections:
-        corrections = fb.get('cues', [])
-
     return {
-        'pose': pose_name,
-        'display_name': DISPLAY_NAMES.get(pose_name, pose_name),
+        'pose':        pose_name,
+        'display_name':DISPLAY_NAMES.get(pose_name, pose_name),
+        'emoji':       POSE_EMOJIS.get(pose_name, '🧘'),
+        'category':    POSE_CATEGORIES.get(pose_name, ''),
         'description': fb.get('description', ''),
-        'good_msg': fb.get('good_msg', 'Good pose!'),
-        'corrections': corrections,
-        'cues': fb.get('cues', []),
+        'difficulty':  fb.get('difficulty', 'Beginner'),
+        'benefits':    fb.get('benefits', ''),
+        'good_msg':    fb.get('good_msg', 'Good pose!'),
+        'corrections': fb.get('corrections', []),
+        'cues':        fb.get('cues', []),
     }
 
 def simulate_detection(target_pose=None):
-    """Simulate pose detection when no real webcam available."""
-    if target_pose and target_pose in POSE_LABELS:
-        pose = target_pose
-    else:
-        pose = random.choice(POSE_LABELS)
-    confidence = random.uniform(0.78, 0.97)
-    accuracy   = round(confidence * 100, 1)
-    is_correct = accuracy >= 75
-    return pose, accuracy, is_correct
+    pose = target_pose if (target_pose and target_pose in POSE_LABELS) \
+           else random.choice(POSE_LABELS)
+    acc  = round(random.uniform(68, 97), 1)
+    return pose, acc, acc >= 75
 
-# ─── ROUTES: PAGES ────────────────────────────────────────────────────────────
+def _update_streak(db, user_id: int, is_correct: bool, pose_name: str):
+    """Update streak record, returns (current_streak, max_streak)."""
+    row = db.execute("SELECT * FROM streaks WHERE user_id=?", (user_id,)).fetchone()
+    if row:
+        cur = row['current_streak']
+        mx  = row['max_streak']
+    else:
+        cur, mx = 0, 0
+
+    if is_correct:
+        cur += 1
+        mx   = max(mx, cur)
+    else:
+        cur  = 0
+
+    db.execute("""
+        INSERT INTO streaks (user_id, current_streak, max_streak, last_pose, updated_at)
+        VALUES (?,?,?,?,?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          current_streak=excluded.current_streak,
+          max_streak=excluded.max_streak,
+          last_pose=excluded.last_pose,
+          updated_at=excluded.updated_at
+    """, (user_id, cur, mx, pose_name, datetime.now().isoformat()))
+    db.commit()
+    return cur, mx
+
+def _get_recommendations(db, user_id: int, limit=5):
+    """Poses with lowest average accuracy — suggest for practice."""
+    rows = db.execute("""
+        SELECT pose_name, AVG(accuracy) as avg_acc, COUNT(*) as cnt
+        FROM pose_history WHERE user_id=?
+        GROUP BY pose_name ORDER BY avg_acc ASC LIMIT ?
+    """, (user_id, limit)).fetchall()
+    recs = []
+    for r in rows:
+        recs.append({
+            'pose':        r['pose_name'],
+            'display_name':DISPLAY_NAMES.get(r['pose_name'], r['pose_name']),
+            'emoji':       POSE_EMOJIS.get(r['pose_name'], '🧘'),
+            'avg_accuracy':round(r['avg_acc'], 1),
+            'sessions':    r['cnt'],
+            'tip':         POSE_FEEDBACK.get(r['pose_name'], {}).get('cues', ['Keep practicing!'])[0],
+        })
+    # If fewer than limit tried, suggest untried poses
+    tried = {r['pose_name'] for r in rows}
+    for pose in POSE_LABELS:
+        if pose not in tried and len(recs) < limit:
+            recs.append({
+                'pose':        pose,
+                'display_name':DISPLAY_NAMES.get(pose, pose),
+                'emoji':       POSE_EMOJIS.get(pose, '🧘'),
+                'avg_accuracy':None,
+                'sessions':    0,
+                'tip':         'Not tried yet — give it a go!',
+            })
+    return recs[:limit]
+
+def _build_weekly_chart(db, user_id: int):
+    """Last 7 days accuracy per day for Chart.js line chart."""
+    rows = db.execute("""
+        SELECT DATE(detected_at) as day, AVG(accuracy) as avg_acc, COUNT(*) as cnt
+        FROM pose_history WHERE user_id=?
+          AND detected_at >= DATE('now','-6 days')
+        GROUP BY DATE(detected_at) ORDER BY day ASC
+    """, (user_id,)).fetchall()
+    labels, accs, counts = [], [], []
+    from datetime import date, timedelta as td
+    for i in range(7):
+        d = (date.today() - td(days=6-i)).isoformat()
+        labels.append(d[5:])    # MM-DD
+        match = next((r for r in rows if r['day'] == d), None)
+        accs.append(round(match['avg_acc'], 1) if match else None)
+        counts.append(match['cnt'] if match else 0)
+    return {'labels': labels, 'accuracy': accs, 'session_counts': counts}
+
+def _build_pose_chart(db, user_id: int):
+    """Per-pose avg accuracy for radar/bar chart."""
+    rows = db.execute("""
+        SELECT pose_name, AVG(accuracy) as avg_acc, COUNT(*) as cnt
+        FROM pose_history WHERE user_id=? GROUP BY pose_name ORDER BY avg_acc DESC
+    """, (user_id,)).fetchall()
+    return {
+        'labels':   [DISPLAY_NAMES.get(r['pose_name'], r['pose_name']) for r in rows],
+        'accuracy': [round(r['avg_acc'], 1) for r in rows],
+        'counts':   [r['cnt'] for r in rows],
+        'poses':    [r['pose_name'] for r in rows],
+    }
+
+# ─── PAGE ROUTES ──────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html',
+        poses=POSE_LABELS, display_names=DISPLAY_NAMES,
+        emojis=POSE_EMOJIS, categories=POSE_CATEGORIES)
 
 @app.route('/login')
 def login_page():
-    if 'user_id' in session:
-        return redirect('/dashboard')
+    if 'user_id' in session: return redirect('/dashboard')
     return render_template('auth.html', page='login')
 
 @app.route('/register')
 def register_page():
-    if 'user_id' in session:
-        return redirect('/dashboard')
+    if 'user_id' in session: return redirect('/dashboard')
     return render_template('auth.html', page='register')
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user_id' not in session:
-        return redirect('/login')
+    if 'user_id' not in session: return redirect('/login')
     return render_template('dashboard.html')
 
 @app.route('/practice')
 def practice():
-    if 'user_id' not in session:
-        return redirect('/login')
-    return render_template('practice.html', poses=POSE_LABELS, display_names=DISPLAY_NAMES)
+    if 'user_id' not in session: return redirect('/login')
+    return render_template('practice.html',
+        poses=POSE_LABELS, display_names=DISPLAY_NAMES, emojis=POSE_EMOJIS)
 
-# ─── ROUTES: AUTH API ─────────────────────────────────────────────────────────
+# ─── AUTH API ─────────────────────────────────────────────────────────────────
 @app.route('/api/register', methods=['POST'])
 def api_register():
-    data = request.json or {}
-    name  = (data.get('name') or '').strip()
-    email = (data.get('email') or '').strip().lower()
-    pw    = data.get('password') or ''
-
+    d     = request.json or {}
+    name  = (d.get('name') or '').strip()
+    email = (d.get('email') or '').strip().lower()
+    pw    = d.get('password') or ''
     if not all([name, email, pw]):
-        return jsonify({'error': 'All fields required'}), 400
+        return jsonify({'error': 'All fields are required'}), 400
     if len(pw) < 6:
         return jsonify({'error': 'Password must be at least 6 characters'}), 400
-
+    if '@' not in email or '.' not in email.split('@')[-1]:
+        return jsonify({'error': 'Please enter a valid email address'}), 400
     db = get_db()
-    existing = db.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
-    if existing:
-        return jsonify({'error': 'Email already registered'}), 409
-
+    if db.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone():
+        return jsonify({'error': 'This email is already registered. Please login.'}), 409
     otp = generate_otp()
     store_otp(email, otp, 'register')
-    if not send_otp_email(email, otp, "registration"):
-        return jsonify({'error': 'Failed to send OTP email. Check SMTP settings.'}), 500
-
-    # Store pending user in session
+    result = send_otp_email(email, otp, "account registration")
     session['pending_register'] = {'name': name, 'email': email, 'pw_hash': hash_password(pw)}
-    return jsonify({'success': True, 'message': 'OTP sent to your email'})
+    msg = 'OTP sent to your email' if result['method'] == 'smtp' \
+          else 'OTP printed to server console (configure EMAIL_USER/EMAIL_PASS for real email)'
+    return jsonify({'success': True, 'message': msg, 'email_method': result['method']})
 
 @app.route('/api/verify-register-otp', methods=['POST'])
 def api_verify_register():
-    data  = request.json or {}
-    otp   = data.get('otp', '').strip()
+    d       = request.json or {}
+    otp     = d.get('otp', '').strip()
     pending = session.get('pending_register')
-
     if not pending:
-        return jsonify({'error': 'No registration pending'}), 400
-
+        return jsonify({'error': 'Registration session expired. Please start again.'}), 400
     ok, msg = verify_otp(pending['email'], otp, 'register')
     if not ok:
         return jsonify({'error': msg}), 400
-
     db = get_db()
     try:
-        db.execute(
-            "INSERT INTO users (name, email, password_hash, is_verified) VALUES (?,?,?,1)",
-            (pending['name'], pending['email'], pending['pw_hash'])
-        )
+        db.execute("INSERT INTO users (name,email,password_hash,is_verified) VALUES (?,?,?,1)",
+                   (pending['name'], pending['email'], pending['pw_hash']))
         db.commit()
         user = db.execute("SELECT id FROM users WHERE email=?", (pending['email'],)).fetchone()
         session.pop('pending_register', None)
-        session['user_id']   = user['id']
+        session['user_id']    = user['id']
         session['user_email'] = pending['email']
         session['user_name']  = pending['name']
         return jsonify({'success': True, 'redirect': '/dashboard'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Account creation failed: {str(e)}'}), 500
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    data  = request.json or {}
-    email = (data.get('email') or '').strip().lower()
-    pw    = data.get('password') or ''
-
-    db = get_db()
+    d     = request.json or {}
+    email = (d.get('email') or '').strip().lower()
+    pw    = d.get('password') or ''
+    if not email or not pw:
+        return jsonify({'error': 'Email and password are required'}), 400
+    db   = get_db()
     user = db.execute(
         "SELECT * FROM users WHERE email=? AND password_hash=?",
-        (email, hash_password(pw))
-    ).fetchone()
-
+        (email, hash_password(pw))).fetchone()
     if not user:
         return jsonify({'error': 'Invalid email or password'}), 401
     if not user['is_verified']:
-        return jsonify({'error': 'Email not verified'}), 403
-
+        return jsonify({'error': 'Email not verified. Please register again.'}), 403
     otp = generate_otp()
     store_otp(email, otp, 'login')
-    if not send_otp_email(email, otp, "login"):
-        return jsonify({'error': 'Failed to send OTP email. Check SMTP settings.'}), 500
+    result = send_otp_email(email, otp, "login verification")
     session['pending_login'] = {'user_id': user['id'], 'email': email, 'name': user['name']}
-    return jsonify({'success': True, 'message': 'OTP sent to your email'})
+    msg = 'OTP sent to your email' if result['method'] == 'smtp' \
+          else 'OTP printed to server console (configure EMAIL_USER/EMAIL_PASS for real email)'
+    return jsonify({'success': True, 'message': msg, 'email_method': result['method']})
 
 @app.route('/api/verify-login-otp', methods=['POST'])
 def api_verify_login():
-    data = request.json or {}
-    otp  = data.get('otp', '').strip()
+    d       = request.json or {}
+    otp     = d.get('otp', '').strip()
     pending = session.get('pending_login')
-
     if not pending:
-        return jsonify({'error': 'No login pending'}), 400
-
+        return jsonify({'error': 'Login session expired. Please start again.'}), 400
     ok, msg = verify_otp(pending['email'], otp, 'login')
     if not ok:
         return jsonify({'error': msg}), 400
-
     session['user_id']    = pending['user_id']
     session['user_email'] = pending['email']
     session['user_name']  = pending['name']
@@ -356,145 +495,197 @@ def api_verify_login():
 
 @app.route('/api/resend-otp', methods=['POST'])
 def api_resend_otp():
-    data    = request.json or {}
-    purpose = data.get('purpose', 'login')
+    d       = request.json or {}
+    purpose = d.get('purpose', 'login')
     pending = session.get(f'pending_{purpose}')
     if not pending:
-        return jsonify({'error': 'No pending verification'}), 400
-    email = pending.get('email') or pending.get('email')
-    otp   = generate_otp()
-    store_otp(email, otp, purpose)
-    if not send_otp_email(email, otp, purpose):
-        return jsonify({'error': 'Failed to resend OTP email. Check SMTP settings.'}), 500
-    return jsonify({'success': True, 'message': 'OTP resent'})
+        return jsonify({'error': 'Session expired. Please start again.'}), 400
+    otp    = generate_otp()
+    store_otp(pending['email'], otp, purpose)
+    result = send_otp_email(pending['email'], otp, purpose)
+    msg = 'New OTP sent to your email' if result['method'] == 'smtp' \
+          else 'New OTP printed to server console'
+    return jsonify({'success': True, 'message': msg})
 
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
     session.clear()
     return jsonify({'success': True, 'redirect': '/login'})
 
-# ─── ROUTES: USER API ─────────────────────────────────────────────────────────
+# ─── USER / ANALYTICS API ─────────────────────────────────────────────────────
 @app.route('/api/me')
 @login_required
 def api_me():
     db   = get_db()
-    user = db.execute("SELECT id, name, email, created_at FROM users WHERE id=?",
-                      (session['user_id'],)).fetchone()
+    uid  = session['user_id']
+    user = db.execute("SELECT id,name,email,created_at FROM users WHERE id=?", (uid,)).fetchone()
     hist = db.execute(
-        "SELECT pose_name, accuracy, detected_at FROM pose_history WHERE user_id=? ORDER BY detected_at DESC LIMIT 20",
-        (session['user_id'],)
-    ).fetchall()
+        "SELECT pose_name,accuracy,is_correct,hold_seconds,detected_at "
+        "FROM pose_history WHERE user_id=? ORDER BY detected_at DESC LIMIT 30",
+        (uid,)).fetchall()
     stats = db.execute(
-        "SELECT pose_name, AVG(accuracy) as avg_acc, COUNT(*) as count FROM pose_history WHERE user_id=? GROUP BY pose_name",
-        (session['user_id'],)
-    ).fetchall()
+        "SELECT pose_name, AVG(accuracy) as avg_acc, MAX(accuracy) as max_acc, "
+        "COUNT(*) as count, SUM(is_correct) as correct_count "
+        "FROM pose_history WHERE user_id=? GROUP BY pose_name ORDER BY avg_acc DESC",
+        (uid,)).fetchall()
+    streak_row = db.execute("SELECT * FROM streaks WHERE user_id=?", (uid,)).fetchone()
+    total = db.execute("SELECT COUNT(*) as c FROM pose_history WHERE user_id=?", (uid,)).fetchone()['c']
+    avg_all = db.execute("SELECT AVG(accuracy) as a FROM pose_history WHERE user_id=?", (uid,)).fetchone()['a']
+
+    weekly   = _build_weekly_chart(db, uid)
+    pose_chart = _build_pose_chart(db, uid)
+    recs     = _get_recommendations(db, uid)
+
     return jsonify({
-        'user': dict(user),
-        'history': [dict(h) for h in hist],
-        'stats': [dict(s) for s in stats],
-        'total_sessions': sum(s['count'] for s in stats),
+        'user':           dict(user),
+        'history':        [dict(h) for h in hist],
+        'stats':          [dict(s) for s in stats],
+        'total_sessions': total,
+        'avg_accuracy':   round(avg_all, 1) if avg_all else None,
+        'streak': {
+            'current': streak_row['current_streak'] if streak_row else 0,
+            'max':     streak_row['max_streak']     if streak_row else 0,
+        },
+        'weekly_chart':   weekly,
+        'pose_chart':     pose_chart,
+        'recommendations':recs,
     })
 
-# ─── ROUTES: POSE API ─────────────────────────────────────────────────────────
+@app.route('/api/save-session', methods=['POST'])
+@login_required
+def api_save_session():
+    """Called when user ends a practice session — saves summary."""
+    d         = request.json or {}
+    pose_name = d.get('pose_name', '')
+    duration  = float(d.get('duration_sec', 0))
+    avg_acc   = float(d.get('avg_accuracy', 0))
+    max_streak= int(d.get('max_streak', 0))
+    if not pose_name or duration <= 0:
+        return jsonify({'error': 'Invalid session data'}), 400
+    db = get_db()
+    db.execute("INSERT INTO sessions (user_id,pose_name,duration_sec,avg_accuracy,max_streak) VALUES (?,?,?,?,?)",
+               (session['user_id'], pose_name, duration, avg_acc, max_streak))
+    db.commit()
+    return jsonify({'success': True})
+
+# ─── POSE API ─────────────────────────────────────────────────────────────────
 @app.route('/api/poses')
 def api_poses():
     return jsonify({
-        'poses': POSE_LABELS,
-        'display_names': DISPLAY_NAMES,
-        'feedback': {k: {'description': v['description'], 'cues': v['cues']}
-                     for k, v in POSE_FEEDBACK.items()}
+        'poses':        POSE_LABELS,
+        'display_names':DISPLAY_NAMES,
+        'emojis':       POSE_EMOJIS,
+        'categories':   POSE_CATEGORIES,
+        'feedback': {
+            k: {'description': v.get('description',''), 'cues': v.get('cues',[]),
+                'difficulty': v.get('difficulty','Beginner'), 'benefits': v.get('benefits',''),
+                'corrections': v.get('corrections', [])}
+            for k, v in POSE_FEEDBACK.items()
+        },
     })
 
+# ─── DETECT API ───────────────────────────────────────────────────────────────
 @app.route('/api/detect', methods=['POST'])
 @login_required
 def api_detect():
-    """
-    Accepts base64 image frame, runs MediaPipe + ML classification.
-    Returns: pose, confidence, feedback, skeleton overlay.
-    """
-    data = request.json or {}
+    data        = request.json or {}
     frame_b64   = data.get('frame')
     target_pose = data.get('target_pose')
+    hold_secs   = float(data.get('hold_seconds', 0))
 
-    # frame_b64 may be None in simulation/test mode — that's fine
+    uid = session['user_id']
 
     try:
-        # Decode image
-        img_bytes = base64.b64decode(frame_b64.split(',')[-1])
-        nparr = np.frombuffer(img_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        pose_name, accuracy, is_correct = None, 0.0, False
+        annotated_b64 = None
 
-        if frame is None:
-            raise ValueError("Could not decode frame")
+        if frame_b64 and MP_AVAILABLE:
+            img_bytes = base64.b64decode(frame_b64.split(',')[-1])
+            frame     = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_COLOR)
+            if frame is not None:
+                results = pose_detector.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                if results.pose_landmarks:
+                    kp         = extract_keypoints(results.pose_landmarks)
+                    pred_idx   = ML_MODEL.predict([kp])[0]
+                    pred_proba = ML_MODEL.predict_proba([kp])[0]
+                    pose_name  = LABEL_ENC.inverse_transform([pred_idx])[0]
+                    confidence = float(np.max(pred_proba))
+                    accuracy   = round(confidence * 100, 1)
+                    is_correct = (target_pose is None or pose_name == target_pose) and accuracy >= 70
+                    annotated  = frame.copy()
+                    mp_drawing.draw_landmarks(
+                        annotated, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                        mp_drawing.DrawingSpec(color=(34,197,94), thickness=2, circle_radius=3),
+                        mp_drawing.DrawingSpec(color=(255,255,255), thickness=2),
+                    )
+                    _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                    annotated_b64 = "data:image/jpeg;base64," + base64.b64encode(buf).decode()
 
-        if MP_AVAILABLE:
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = pose_detector.process(rgb)
-
-            if results.pose_landmarks:
-                kp = extract_keypoints(results.pose_landmarks)
-                pred_idx  = ML_MODEL.predict([kp])[0]
-                pred_proba = ML_MODEL.predict_proba([kp])[0]
-                pose_name  = LABEL_ENC.inverse_transform([pred_idx])[0]
-                confidence = float(np.max(pred_proba))
-                accuracy   = round(confidence * 100, 1)
-                is_correct = (target_pose is None or pose_name == target_pose) and accuracy >= 70
-
-                # Draw skeleton on frame
-                annotated = frame.copy()
-                mp_drawing.draw_landmarks(
-                    annotated, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                    mp_drawing.DrawingSpec(color=(34, 197, 94), thickness=2, circle_radius=3),
-                    mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=2)
-                )
-                _, buf = cv2.imencode('.jpg', annotated, [cv2.IMWRITE_JPEG_QUALITY, 75])
-                annotated_b64 = "data:image/jpeg;base64," + base64.b64encode(buf).decode()
-                fb = get_pose_feedback(pose_name, results.pose_landmarks)
-            else:
-                pose_name, accuracy, is_correct = simulate_detection(target_pose)
-                confidence = accuracy / 100
-                annotated_b64 = None
-                fb = get_pose_feedback(pose_name)
-        else:
+        if pose_name is None:
             pose_name, accuracy, is_correct = simulate_detection(target_pose)
-            confidence = accuracy / 100
-            annotated_b64 = None
-            fb = get_pose_feedback(pose_name)
 
-        # Save to history
+        # Streak update
         db = get_db()
+        cur_streak, max_streak = _update_streak(db, uid, is_correct, pose_name)
+
+        # Save detection
         db.execute(
-            "INSERT INTO pose_history (user_id, pose_name, accuracy) VALUES (?,?,?)",
-            (session['user_id'], pose_name, accuracy)
-        )
+            "INSERT INTO pose_history (user_id,pose_name,accuracy,is_correct,hold_seconds) VALUES (?,?,?,?,?)",
+            (uid, pose_name, accuracy, int(is_correct), hold_secs))
         db.commit()
 
+        # Build rich feedback
+        fb = get_pose_feedback(pose_name)
+
+        # Conditional feedback messages
+        if accuracy >= 90:
+            alert_level    = 'perfect'
+            alert_message  = f"🎯 {fb['good_msg']}"
+        elif accuracy >= 75:
+            alert_level    = 'good'
+            alert_message  = f"👍 Good form! {fb['cues'][0] if fb['cues'] else 'Keep it up!'}"
+        elif accuracy >= 55:
+            alert_level    = 'warning'
+            correction     = fb['corrections'][0] if fb['corrections'] else 'Check your alignment'
+            alert_message  = f"⚠️ Almost there! {correction}"
+        else:
+            alert_level    = 'error'
+            correction     = fb['corrections'][0] if fb['corrections'] else 'Follow the pose cues'
+            alert_message  = f"❌ Incorrect posture. {correction}"
+
         return jsonify({
-            'pose':         pose_name,
-            'display_name': DISPLAY_NAMES.get(pose_name, pose_name),
-            'accuracy':     accuracy,
-            'confidence':   confidence,
-            'is_correct':   is_correct,
-            'feedback':     fb,
+            'pose':          pose_name,
+            'display_name':  DISPLAY_NAMES.get(pose_name, pose_name),
+            'emoji':         POSE_EMOJIS.get(pose_name, '🧘'),
+            'accuracy':      accuracy,
+            'confidence':    accuracy / 100,
+            'is_correct':    is_correct,
+            'feedback':      fb,
+            'alert_level':   alert_level,
+            'alert_message': alert_message,
+            'streak': {
+                'current': cur_streak,
+                'max':     max_streak,
+                'milestone': cur_streak > 0 and cur_streak % 5 == 0,
+            },
             'annotated_frame': annotated_b64,
-            'mp_available': MP_AVAILABLE,
+            'mp_available':    MP_AVAILABLE,
         })
 
     except Exception as e:
         print(f"[Detect Error] {e}")
-        # Graceful fallback
+        import traceback; traceback.print_exc()
         pose_name, accuracy, is_correct = simulate_detection(target_pose)
         fb = get_pose_feedback(pose_name)
         return jsonify({
-            'pose':         pose_name,
-            'display_name': DISPLAY_NAMES.get(pose_name, pose_name),
-            'accuracy':     accuracy,
-            'confidence':   accuracy / 100,
-            'is_correct':   is_correct,
-            'feedback':     fb,
-            'annotated_frame': None,
-            'mp_available': False,
+            'pose': pose_name, 'display_name': DISPLAY_NAMES.get(pose_name,''),
+            'emoji': POSE_EMOJIS.get(pose_name,'🧘'), 'accuracy': accuracy,
+            'confidence': accuracy/100, 'is_correct': is_correct,
+            'feedback': fb, 'alert_level': 'warning',
+            'alert_message': '⚠️ Detection error — check your pose',
+            'streak': {'current': 0, 'max': 0, 'milestone': False},
+            'annotated_frame': None, 'mp_available': False,
         })
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    app.run(debug=True, port=5000, host='0.0.0.0')

@@ -45,7 +45,7 @@
         <a href="#poses" class="btn-ghost btn-lg">View 10 Poses</a>
       </div>
       <div class="hero-stats">
-        <div class="stat"><span class="stat-n">10</span><span class="stat-l">Yoga Poses</span></div>
+        <div class="stat"><span class="stat-n">25</span><span class="stat-l">Yoga Poses</span></div>
         <div class="stat-div"></div>
         <div class="stat"><span class="stat-n">95%</span><span class="stat-l">Accuracy</span></div>
         <div class="stat-div"></div>
@@ -105,26 +105,42 @@
   <!-- 10 POSES -->
   <section class="poses-section" id="poses">
     <div class="section-inner">
-      <h2 class="section-title">10 Yoga Poses</h2>
-      <p class="section-sub">ZenPose detects and corrects all these poses in real time</p>
+      <h2 class="section-title">25 Yoga Poses</h2>
+      <p class="section-sub">ZenPose detects, classifies and corrects all 25 poses in real time</p>
       <div class="poses-grid">
         {% set poses = [
-          ("🧍", "Tadasana", "Mountain Pose", "Foundation of all standing poses. Builds balance and posture."),
-          ("🌲", "Vrikshasana", "Tree Pose", "One-legged balance. Builds focus and hip flexibility."),
-          ("⚔️", "Warrior I", "Virabhadrasana I", "Front knee bent, arms raised. Builds leg and core strength."),
-          ("🗡️", "Warrior II", "Virabhadrasana II", "Arms extended wide. Opens hips and chest."),
-          ("🌟", "Goddess", "Utkata Konasana", "Wide squat, arms open. Strengthens thighs and core."),
-          ("🐕", "Downward Dog", "Adho Mukha Svanasana", "Inverted V-shape. Stretches hamstrings and spine."),
-          ("🐍", "Cobra", "Bhujangasana", "Chest lifted, back arched. Strengthens spine and arms."),
-          ("📐", "Plank", "Phalakasana", "Full body straight line. Builds core and arm strength."),
-          ("🔺", "Triangle", "Trikonasana", "Extended side stretch. Opens hips and lengthens spine."),
-          ("🙏", "Child's Pose", "Balasana", "Restful forward fold. Releases tension and calms mind."),
+          ("🧍","Tadasana","Mountain Pose","Beginner · Standing","Foundation of all standing poses. Builds posture and balance."),
+          ("🌲","Vrikshasana","Tree Pose","Beginner · Balance","One-legged balance. Builds focus and hip flexibility."),
+          ("⚔️","Warrior I","Virabhadrasana I","Beginner · Standing","Front knee bent, arms raised. Builds leg and core strength."),
+          ("🗡️","Warrior II","Virabhadrasana II","Beginner · Standing","Arms extended wide. Opens hips and chest."),
+          ("🦅","Warrior III","Virabhadrasana III","Intermediate · Balance","Body parallel to floor in T-shape. Advanced balance pose."),
+          ("🌟","Goddess","Utkata Konasana","Beginner · Standing","Wide squat, arms open. Strengthens thighs and core."),
+          ("🐕","Downward Dog","Adho Mukha Svanasana","Beginner · Inversion","Inverted V-shape. Stretches hamstrings and spine."),
+          ("🐍","Cobra","Bhujangasana","Beginner · Backbend","Chest lifted, back arched. Strengthens spine and opens chest."),
+          ("📐","Plank","Phalakasana","Beginner · Core","Full body straight line. Builds core and arm strength."),
+          ("🔺","Triangle","Trikonasana","Beginner · Standing","Extended side stretch. Opens hips and lengthens spine."),
+          ("🙏","Child's Pose","Balasana","Beginner · Resting","Restful forward fold. Releases tension and calms mind."),
+          ("🪑","Chair Pose","Utkatasana","Beginner · Standing","Seated in air. Builds thigh and core strength."),
+          ("🌉","Bridge Pose","Setu Bandha","Beginner · Backbend","Supine backbend. Opens chest and strengthens back."),
+          ("🐪","Camel Pose","Ustrasana","Intermediate · Backbend","Deep kneeling backbend. Opens chest and hip flexors dramatically."),
+          ("⛵","Boat Pose","Navasana","Intermediate · Core","Balance on sit bones, form a V. Core-intensive pose."),
+          ("🕊️","Pigeon Pose","Eka Pada Kapotasana","Intermediate · Hip Opener","Deep hip opener. Front leg bent, back leg extended."),
+          ("🧘","Seated Forward Bend","Paschimottanasana","Beginner · Forward Bend","Fold over extended legs. Deep hamstring and spine stretch."),
+          ("🌙","Half Moon","Ardha Chandrasana","Intermediate · Balance","Balance on one foot sideways like a crescent moon."),
+          ("🦅","Eagle Pose","Garudasana","Intermediate · Balance","Arms and legs wrapped. Tests balance and concentration."),
+          ("💃","Lord of the Dance","Natarajasana","Advanced · Balance","Standing backbend. One leg raised behind, body arches open."),
+          ("💐","Garland Pose","Malasana","Beginner · Hip Opener","Deep squat with palms at heart. Opens hips and groin."),
+          ("🐮","Cow Face Pose","Gomukhasana","Intermediate · Hip Opener","Knees stacked, arms clasp behind back. Deep hip stretch."),
+          ("🦁","Sphinx Pose","Salamba Bhujangasana","Beginner · Backbend","Gentle prone backbend on forearms. Softer than Cobra."),
+          ("🤸","Side Plank","Vasisthasana","Intermediate · Core","One-arm balance in lateral line. Builds oblique strength."),
+          ("😴","Corpse Pose","Savasana","Beginner · Resting","Final relaxation. Total stillness — body absorbs the practice."),
         ] %}
-        {% for emoji, name, sanskrit, desc in poses %}
+        {% for emoji, name, sanskrit, level, desc in poses %}
         <div class="pose-card">
           <div class="pose-card-emoji">{{ emoji }}</div>
           <h3 class="pose-card-name">{{ name }}</h3>
           <div class="pose-card-sanskrit">{{ sanskrit }}</div>
+          <div class="pose-card-level">{{ level }}</div>
           <p class="pose-card-desc">{{ desc }}</p>
         </div>
         {% endfor %}
