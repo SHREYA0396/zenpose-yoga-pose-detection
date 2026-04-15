@@ -64,7 +64,7 @@
 /* POSE LIBRARY */
 .pose-library {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 12px;
 }
 .pose-lib-card {
@@ -115,10 +115,3 @@
 .plc-acc-high { color: var(--green-light) !important; }
 .plc-acc-mid  { color: #fbbf24 !important; }
 .plc-acc-low  { color: #f87171 !important; }
-.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-.dash-card.full-width { grid-column: 1 / -1; }
-.pose-library {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 12px;
-}
