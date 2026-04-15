@@ -42,14 +42,14 @@
           Start Free Practice
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
-        <a href="#poses" class="btn-ghost btn-lg">View 10 Poses</a>
+        <a href="#poses" class="btn-ghost btn-lg">View 25 Poses</a>
       </div>
       <div class="hero-stats">
         <div class="stat"><span class="stat-n">25</span><span class="stat-l">Yoga Poses</span></div>
         <div class="stat-div"></div>
-        <div class="stat"><span class="stat-n">95%</span><span class="stat-l">Accuracy</span></div>
+        <div class="stat"><span class="stat-n">99.95%</span><span class="stat-l">Accuracy</span></div>
         <div class="stat-div"></div>
-        <div class="stat"><span class="stat-n">Real-Time</span><span class="stat-l">Feedback</span></div>
+        <div class="stat"><span class="stat-n">Real-Time</span><span class="stat-l">AI Feedback</span></div>
       </div>
     </div>
     <div class="hero-visual">
@@ -109,31 +109,31 @@
       <p class="section-sub">ZenPose detects, classifies and corrects all 25 poses in real time</p>
       <div class="poses-grid">
         {% set poses = [
-          ("🧍","Tadasana","Mountain Pose","Beginner · Standing","Foundation of all standing poses. Builds posture and balance."),
-          ("🌲","Vrikshasana","Tree Pose","Beginner · Balance","One-legged balance. Builds focus and hip flexibility."),
-          ("⚔️","Warrior I","Virabhadrasana I","Beginner · Standing","Front knee bent, arms raised. Builds leg and core strength."),
-          ("🗡️","Warrior II","Virabhadrasana II","Beginner · Standing","Arms extended wide. Opens hips and chest."),
-          ("🦅","Warrior III","Virabhadrasana III","Intermediate · Balance","Body parallel to floor in T-shape. Advanced balance pose."),
-          ("🌟","Goddess","Utkata Konasana","Beginner · Standing","Wide squat, arms open. Strengthens thighs and core."),
-          ("🐕","Downward Dog","Adho Mukha Svanasana","Beginner · Inversion","Inverted V-shape. Stretches hamstrings and spine."),
-          ("🐍","Cobra","Bhujangasana","Beginner · Backbend","Chest lifted, back arched. Strengthens spine and opens chest."),
-          ("📐","Plank","Phalakasana","Beginner · Core","Full body straight line. Builds core and arm strength."),
-          ("🔺","Triangle","Trikonasana","Beginner · Standing","Extended side stretch. Opens hips and lengthens spine."),
-          ("🙏","Child's Pose","Balasana","Beginner · Resting","Restful forward fold. Releases tension and calms mind."),
-          ("🪑","Chair Pose","Utkatasana","Beginner · Standing","Seated in air. Builds thigh and core strength."),
-          ("🌉","Bridge Pose","Setu Bandha","Beginner · Backbend","Supine backbend. Opens chest and strengthens back."),
-          ("🐪","Camel Pose","Ustrasana","Intermediate · Backbend","Deep kneeling backbend. Opens chest and hip flexors dramatically."),
-          ("⛵","Boat Pose","Navasana","Intermediate · Core","Balance on sit bones, form a V. Core-intensive pose."),
-          ("🕊️","Pigeon Pose","Eka Pada Kapotasana","Intermediate · Hip Opener","Deep hip opener. Front leg bent, back leg extended."),
-          ("🧘","Seated Forward Bend","Paschimottanasana","Beginner · Forward Bend","Fold over extended legs. Deep hamstring and spine stretch."),
-          ("🌙","Half Moon","Ardha Chandrasana","Intermediate · Balance","Balance on one foot sideways like a crescent moon."),
-          ("🦅","Eagle Pose","Garudasana","Intermediate · Balance","Arms and legs wrapped. Tests balance and concentration."),
-          ("💃","Lord of the Dance","Natarajasana","Advanced · Balance","Standing backbend. One leg raised behind, body arches open."),
-          ("💐","Garland Pose","Malasana","Beginner · Hip Opener","Deep squat with palms at heart. Opens hips and groin."),
-          ("🐮","Cow Face Pose","Gomukhasana","Intermediate · Hip Opener","Knees stacked, arms clasp behind back. Deep hip stretch."),
-          ("🦁","Sphinx Pose","Salamba Bhujangasana","Beginner · Backbend","Gentle prone backbend on forearms. Softer than Cobra."),
-          ("🤸","Side Plank","Vasisthasana","Intermediate · Core","One-arm balance in lateral line. Builds oblique strength."),
-          ("😴","Corpse Pose","Savasana","Beginner · Resting","Final relaxation. Total stillness — body absorbs the practice."),
+          ("🧍","Tadasana","Mountain Pose","Beginner · Standing","Foundation of all standing poses. Aligns the full body and builds postural awareness."),
+          ("🌲","Vrikshasana","Tree Pose","Beginner · Balance","One-legged balance that sharpens focus, strengthens the legs, and opens the hips."),
+          ("⚔️","Warrior I","Virabhadrasana I","Beginner · Standing","Front knee bent, arms raised. Builds powerful legs, core, and fierce determination."),
+          ("🗡️","Warrior II","Virabhadrasana II","Beginner · Standing","Arms extended wide, hips open. Builds stamina and a calm, steady presence."),
+          ("🦅","Warrior III","Virabhadrasana III","Intermediate · Balance","Body parallel to floor in a T. Demands full-body strength and total concentration."),
+          ("🌟","Goddess Pose","Utkata Konasana","Beginner · Standing","Wide squat, arms wide open. Strengthens inner thighs, glutes, and core deeply."),
+          ("🐕","Downward Dog","Adho Mukha Svanasana","Beginner · Inversion","Inverted V — stretches spine and hamstrings while strengthening arms and shoulders."),
+          ("🐍","Cobra Pose","Bhujangasana","Beginner · Backbend","Chest lifted, back arched. Counters forward-hunching and opens the heart."),
+          ("📐","Plank","Phalakasana","Beginner · Core","Full body in one straight line. The most complete core and arm strengthener in yoga."),
+          ("🔺","Triangle Pose","Trikonasana","Beginner · Standing","Extended side stretch that opens the hips, lengthens the spine, and builds balance."),
+          ("🙏","Child's Pose","Balasana","Beginner · Restorative","Restful forward fold that releases back tension and calms the nervous system instantly."),
+          ("🪑","Chair Pose","Utkatasana","Beginner · Standing","Seated in mid-air — builds intense heat in the thighs, glutes, and core."),
+          ("🌉","Bridge Pose","Setu Bandha Sarvangasana","Beginner · Backbend","Supine backbend that opens the chest and strengthens the entire posterior chain."),
+          ("🕊️","Pigeon Pose","Eka Pada Kapotasana","Intermediate · Hip Opener","The deepest hip opener in yoga. Releases stored tension and emotion in the hips."),
+          ("🐫","Camel Pose","Ustrasana","Intermediate · Backbend","Deep kneeling backbend that opens the entire front body with courage and breath."),
+          ("🌙","Half Moon","Ardha Chandrasana","Intermediate · Balance","Balance on one foot sideways — a radiant pose demanding grace and core strength."),
+          ("⛵","Boat Pose","Navasana","Intermediate · Core","Balance on sit bones in a V shape. Ignites the deep core and builds willpower."),
+          ("🐦","Crow Pose","Bakasana","Advanced · Arm Balance","The gateway arm balance. As much mental as physical — teaches trust and courage."),
+          ("🦅","Eagle Pose","Garudasana","Intermediate · Balance","Limbs wrapped inward. Releases shoulder and hip tension while building balance."),
+          ("🪷","Lotus Pose","Padmasana","Advanced · Seated","The classic meditation seat. Opens hips deeply and creates a stable, grounded base."),
+          ("🐟","Fish Pose","Matsyasana","Beginner · Backbend","Opens the chest and throat. Stimulates the thyroid and counters neck compression."),
+          ("🧘","Seated Forward Bend","Paschimottanasana","Beginner · Forward Bend","Full back-body stretch. Deep surrender that calms the mind and releases the spine."),
+          ("🌀","Supine Twist","Supta Matsyendrasana","Beginner · Twist","Wrings out the spine vertebra by vertebra. Stimulates digestion and melts tension."),
+          ("🏹","Low Lunge","Anjaneyasana","Beginner · Standing","Opens the psoas — the body's deepest hip flexor and the muscle most tied to stress."),
+          ("💎","Side Plank","Vasisthasana","Intermediate · Core","One arm, one line. Builds oblique strength and total lateral body stability."),
         ] %}
         {% for emoji, name, sanskrit, level, desc in poses %}
         <div class="pose-card">
@@ -151,37 +151,52 @@
   <!-- FEATURES -->
   <section class="features-section">
     <div class="section-inner">
-      <h2 class="section-title">What Makes ZenPose Different</h2>
+      <h2 class="section-title">Everything You Need to Practice Deeply</h2>
       <div class="features-grid">
+        <div class="feature-card">
+          <div class="f-icon">🎯</div>
+          <h3>AI Pose Detection</h3>
+          <p>MediaPipe extracts 33 body landmarks per frame. Random Forest classifier identifies your pose with 99.95% accuracy across 25 classes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">📸</div>
+          <h3>Reference Photos</h3>
+          <p>Every pose shows a real reference photo so you know exactly what to aim for before you start holding.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">🎵</div>
+          <h3>Meditation Music</h3>
+          <p>6 ambient sounds generated in-browser — Alpha waves, Theta waves, Singing Bowl 432 Hz, Rain, and Om Drone. No downloads.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">🌿</div>
+          <h3>Ayurvedic Insights</h3>
+          <p>Science-backed yoga facts, 8 healing herbs with daily usage tips, and the full impact of all 25 poses on body and mind.</p>
+        </div>
         <div class="feature-card">
           <div class="f-icon">🎙️</div>
           <h3>Voice Guidance</h3>
-          <p>Real-time voice instructions: "Raise your arms higher", "Straighten your back" — hands-free correction.</p>
+          <p>Real-time voice corrections via Web Speech API — "Bring your arms closer", "Straighten your knees" — hands-free coaching.</p>
         </div>
         <div class="feature-card">
           <div class="f-icon">📊</div>
-          <h3>Progress Tracking</h3>
-          <p>Track accuracy per pose over sessions. See your improvement curve and streak data.</p>
+          <h3>Progress Analytics</h3>
+          <p>Weekly accuracy charts, per-pose performance bars, streak tracking, and personalised pose recommendations.</p>
+        </div>
+        <div class="feature-card">
+          <div class="f-icon">🫁</div>
+          <h3>Guided Breathing</h3>
+          <p>Animated breathing guide with 3 techniques — 4-7-8, Box Breathing, and Calming Breath — with the science behind each.</p>
         </div>
         <div class="feature-card">
           <div class="f-icon">🔒</div>
-          <h3>Secure with OTP</h3>
-          <p>Email OTP-based authentication for both login and registration. Your data stays yours.</p>
-        </div>
-        <div class="feature-card">
-          <div class="f-icon">⚡</div>
-          <h3>Real-Time, 100ms</h3>
-          <p>Under 300ms latency for pose detection. Feedback arrives fast enough to actually help.</p>
+          <h3>Secure OTP Login</h3>
+          <p>Email OTP verification for registration and every login. Your practice data is private and protected.</p>
         </div>
         <div class="feature-card">
           <div class="f-icon">🏠</div>
           <h3>Practice Anywhere</h3>
-          <p>Just a webcam and a browser. No app download, no gym, no trainer required.</p>
-        </div>
-        <div class="feature-card">
-          <div class="f-icon">🧠</div>
-          <h3>ML-Powered</h3>
-          <p>Random Forest classifier trained on 4000+ pose samples. Joint angle analysis for precision.</p>
+          <p>Just a browser and a webcam. Trained on 10,000+ pose samples. No app, no gym, no subscription required.</p>
         </div>
       </div>
     </div>
@@ -203,7 +218,7 @@
         <span class="brand-icon">🧘</span>
         <span class="brand-name">ZenPose</span>
       </div>
-      <p class="footer-copy">© 2025 ZenPose. Built with MediaPipe, Flask & Machine Learning.</p>
+      <p class="footer-copy">© 2026 ZenPose. Built with MediaPipe, Flask &amp; Machine Learning.</p>
     </div>
   </footer>
 </div>

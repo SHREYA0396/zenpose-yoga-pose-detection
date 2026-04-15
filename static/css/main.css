@@ -303,7 +303,7 @@ img { max-width: 100%; }
 
 /* FEATURES */
 .features-section { padding:100px 0; background:var(--bg-1); }
-.features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; justify-items:stretch; }
 .feature-card {
   background: var(--bg-2);
   border: 1px solid var(--border);
