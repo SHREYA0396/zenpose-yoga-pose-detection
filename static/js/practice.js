@@ -1,29 +1,40 @@
-// ─── ZenPose Practice Engine — Enhanced ──────────────────────────────────────
+// ─── ZenPose Practice Engine — Stable Hold-Based Detection ───────────────────
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const HOLD_REQUIRED_MS  = 15000;  // 15 seconds to complete one rep
+const DETECT_INTERVAL   = 700;    // ms between frames sent to server
+const MIN_ACCURACY      = 65;     // % — minimum to start/continue a hold
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 const state = {
-  cameraOn:        false,
-  detecting:       false,
-  voiceOn:         true,
-  targetPose:      null,
-  lastVoice:       0,
-  voiceCooldown:   5000,
+  cameraOn:          false,
+  detecting:         false,
+  voiceOn:           true,
+  targetPose:        null,
+  lastVoice:         0,
+  voiceCooldown:     5000,
   detectionInterval: null,
-  stream:          null,
-  allPoseData:     {},
+  stream:            null,
+  allPoseData:       {},
 
-  // Streak
-  currentStreak:   0,
-  maxStreak:       0,
-  sessionStreak:   0,   // max streak this session
-  correctCount:    0,
+  // Streak / session
+  currentStreak:     0,
+  maxStreak:         0,
+  sessionStreak:     0,
+  repCount:          0,   // completed reps (each = 15s hold)
 
   // Session timer
-  sessionStartTime: null,
-  sessionPose:      null,
-  holdSeconds:      0,
-  sessionActive:    false,
-  sessionDetections: [],  // [{accuracy, is_correct}]
+  sessionStartTime:  null,
+  sessionPose:       null,
+  sessionSeconds:    0,
+  sessionActive:     false,
+  sessionDetections: [],
+
+  // Hold timer — tracks current 15s window
+  holdStartTime:     null,   // when user first entered correct pose
+  holdActive:        false,  // user is currently in a valid hold
+  holdElapsedMs:     0,      // how many ms they have held so far
+  holdTick:          null,   // rAF handle for hold progress bar
 };
 
 // ─── DOM ──────────────────────────────────────────────────────────────────────
@@ -36,6 +47,23 @@ async function toggleCamera() {
 
 async function startCamera() {
   const video = $('user-video');
+
+  // Camera requires a secure context (localhost or https)
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    console.error('Camera error: mediaDevices API unavailable. Open via http://localhost:5000');
+    $('video-placeholder').innerHTML = `
+      <div class="vp-icon">🔒</div>
+      <div class="vp-text">Camera Blocked</div>
+      <div class="vp-sub">Open the app at <b>http://localhost:5000</b> — not 127.0.0.1 or an IP address.</div>`;
+    state.cameraOn = true;
+    $('live-badge').classList.remove('hidden');
+    $('camera-btn').textContent = '⏹ Stop';
+    startDetectionLoop();
+    startSessionTimer();
+    showToast('❌ Open the app at http://localhost:5000 to enable camera.', 'error');
+    return;
+  }
+
   try {
     state.stream = await navigator.mediaDevices.getUserMedia({
       video: { width:{ideal:640}, height:{ideal:480}, facingMode:'user' }, audio: false,
@@ -49,19 +77,37 @@ async function startCamera() {
     $('camera-btn').style.cssText = 'background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;';
     startDetectionLoop();
     startSessionTimer();
-    speak("Camera started. Get into position to begin.");
+    speak(`Camera started. Get into ${getPoseName(state.targetPose)} position.`);
   } catch(err) {
-    // Simulation fallback
+    console.error('Camera error:', err.name, err.message);
+
+    let errMsg = 'Camera unavailable';
+    let errSub = 'Using AI simulation instead';
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      errMsg = 'Camera Permission Denied';
+      errSub = 'Click the camera icon in your browser address bar and allow access, then reload.';
+      showToast('❌ Camera permission denied — allow camera access in your browser and reload.', 'error');
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      errMsg = 'No Camera Found';
+      errSub = 'No camera detected on this device. Running AI simulation.';
+      showToast('No camera detected — running simulation mode.', 'info');
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      errMsg = 'Camera In Use';
+      errSub = 'Camera is being used by another app. Close it and reload.';
+      showToast('❌ Camera is in use by another app. Close it and reload.', 'error');
+    } else {
+      showToast('Camera unavailable — running simulation mode', 'info');
+    }
+
     state.cameraOn = true;
     $('video-placeholder').innerHTML = `
       <div class="vp-icon">🤖</div>
-      <div class="vp-text">Simulation Mode</div>
-      <div class="vp-sub">No camera — using AI simulation</div>`;
+      <div class="vp-text">${errMsg}</div>
+      <div class="vp-sub">${errSub}</div>`;
     $('live-badge').classList.remove('hidden');
     $('camera-btn').textContent = '⏹ Stop';
     startDetectionLoop();
     startSessionTimer();
-    showToast('Camera unavailable — running simulation mode', 'info');
   }
 }
 
@@ -72,7 +118,9 @@ function stopCamera() {
   state.cameraOn = false;
   clearInterval(state.detectionInterval);
   state.detectionInterval = null;
+  cancelAnimationFrame(state.holdTick);
   stopSessionTimer();
+  resetHoldTimer();
   $('live-badge').classList.add('hidden');
   $('video-placeholder').classList.remove('hidden');
   $('video-placeholder').innerHTML = `
@@ -91,17 +139,16 @@ function startSessionTimer() {
   state.sessionPose      = state.targetPose;
   state.sessionDetections = [];
   $('end-session-btn').disabled = false;
-  updateTimerDisplay();
+  tickSessionTimer();
 }
 
-function updateTimerDisplay() {
+function tickSessionTimer() {
   if (!state.sessionActive) return;
-  const elapsed = Math.floor((Date.now() - state.sessionStartTime) / 1000);
-  state.holdSeconds = elapsed;
-  const m = Math.floor(elapsed / 60);
-  const s = elapsed % 60;
+  state.sessionSeconds = Math.floor((Date.now() - state.sessionStartTime) / 1000);
+  const m = Math.floor(state.sessionSeconds / 60);
+  const s = state.sessionSeconds % 60;
   $('session-timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
-  requestAnimationFrame(updateTimerDisplay);
+  requestAnimationFrame(tickSessionTimer);
 }
 
 function stopSessionTimer() {
@@ -112,23 +159,66 @@ function stopSessionTimer() {
 async function endSession() {
   if (!state.sessionActive && !state.cameraOn) return;
   stopCamera();
-
-  // Calculate session average
-  const dets = state.sessionDetections;
+  const dets   = state.sessionDetections;
   const avgAcc = dets.length > 0
-    ? dets.reduce((s, d) => s + d.accuracy, 0) / dets.length
-    : 0;
-
+    ? dets.reduce((s, d) => s + d.accuracy, 0) / dets.length : 0;
   try {
     await api('/api/save-session', {
       pose_name:    state.sessionPose || state.targetPose || 'unknown',
-      duration_sec: state.holdSeconds,
+      duration_sec: state.sessionSeconds,
       avg_accuracy: Math.round(avgAcc * 10) / 10,
       max_streak:   state.sessionStreak,
     });
-    showToast(`Session saved! ${state.holdSeconds}s held, avg ${avgAcc.toFixed(1)}%`, 'success');
+    showToast(`Session saved! ${state.repCount} reps completed.`, 'success');
   } catch(e) {
     showToast('Session could not be saved', 'error');
+  }
+}
+
+// ─── HOLD TIMER ───────────────────────────────────────────────────────────────
+function startHold() {
+  if (state.holdActive) return;
+  state.holdActive    = true;
+  state.holdStartTime = Date.now();
+  tickHoldBar();
+}
+
+function breakHold() {
+  if (!state.holdActive) return;
+  state.holdActive    = false;
+  state.holdStartTime = null;
+  state.holdElapsedMs = 0;
+  cancelAnimationFrame(state.holdTick);
+  renderHoldBar(0);
+}
+
+function resetHoldTimer() {
+  state.holdActive    = false;
+  state.holdStartTime = null;
+  state.holdElapsedMs = 0;
+  cancelAnimationFrame(state.holdTick);
+  renderHoldBar(0);
+}
+
+function tickHoldBar() {
+  if (!state.holdActive) return;
+  state.holdElapsedMs = Date.now() - state.holdStartTime;
+  const pct = Math.min(state.holdElapsedMs / HOLD_REQUIRED_MS, 1);
+  renderHoldBar(pct);
+  if (pct < 1) {
+    state.holdTick = requestAnimationFrame(tickHoldBar);
+  }
+}
+
+function renderHoldBar(pct) {
+  const bar  = $('hold-bar-fill');
+  const lbl  = $('hold-bar-label');
+  const secs = Math.ceil((HOLD_REQUIRED_MS - (pct * HOLD_REQUIRED_MS)) / 1000);
+  if (bar) bar.style.width = (pct * 100).toFixed(1) + '%';
+  if (lbl) {
+    if (pct <= 0)       lbl.textContent = 'Hold the pose for 15s to count a rep';
+    else if (pct >= 1)  lbl.textContent = '✅ Rep complete!';
+    else                lbl.textContent = `Hold… ${secs}s remaining`;
   }
 }
 
@@ -147,31 +237,67 @@ function captureFrame() {
 // ─── DETECTION LOOP ───────────────────────────────────────────────────────────
 function startDetectionLoop() {
   if (state.detectionInterval) clearInterval(state.detectionInterval);
-  state.detectionInterval = setInterval(runDetection, 600);
+  state.detectionInterval = setInterval(runDetection, DETECT_INTERVAL);
 }
 
 async function runDetection() {
-  if (state.detecting) return;
+  if (state.detecting || !state.targetPose) return;
   state.detecting = true;
+
+  const heldMs   = state.holdActive ? (Date.now() - state.holdStartTime) : 0;
+  const countRep = state.holdActive && heldMs >= HOLD_REQUIRED_MS;
+
   try {
     const frame = captureFrame();
     const body  = {
       target_pose:  state.targetPose,
-      hold_seconds: state.holdSeconds,
+      hold_seconds: Math.floor(heldMs / 1000),
+      count_rep:    countRep,
     };
     if (frame) body.frame = frame;
+
     const res = await fetch('/api/detect', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),
     });
     const d = await res.json();
-    if (!d.error) updateUI(d);
+    if (!d.error) handleDetectionResult(d, countRep);
   } catch(e) {
     console.error('Detection error:', e);
   } finally {
     state.detecting = false;
   }
+}
+
+// ─── DETECTION RESULT HANDLER ─────────────────────────────────────────────────
+function handleDetectionResult(d, wasCountRep) {
+  const targetMatched = d.target_matched;
+  const accuracy      = d.accuracy || 0;
+  const isCorrect     = d.is_correct;
+
+  // Manage hold timer based on whether user is in correct pose
+  if (targetMatched && accuracy >= MIN_ACCURACY) {
+    startHold();
+  } else {
+    breakHold();
+  }
+
+  // Rep completion
+  if (wasCountRep && isCorrect) {
+    state.repCount++;
+    $('correct-count').textContent = state.repCount;
+    resetHoldTimer();
+    speak(`Rep ${state.repCount} complete!`);
+    showToast(`🎉 Rep ${state.repCount} complete! Hold again for next rep.`, 'success');
+  } else if (wasCountRep && !isCorrect) {
+    resetHoldTimer();
+    showToast('⚠️ Hold completed but accuracy was too low. Fix your form and try again.', 'warning');
+    speak('Accuracy too low. Check your form and hold again.');
+  }
+
+  state.sessionDetections.push({ accuracy, is_correct: isCorrect });
+  updateUI(d);
 }
 
 // ─── UI UPDATE ────────────────────────────────────────────────────────────────
@@ -180,36 +306,30 @@ function updateUI(d) {
   const poseName   = d.pose      || '';
   const dispName   = d.display_name || poseName;
   const emoji      = d.emoji     || '🧘';
-  const isCorrect  = d.is_correct;
   const fb         = d.feedback  || {};
   const alertLevel = d.alert_level   || 'warning';
   const alertMsg   = d.alert_message || '';
   const streakData = d.streak    || {};
 
-  // ── Accuracy bar ──
-  $('ab-fill').style.width  = acc + '%';
-  $('ab-pct').textContent   = acc.toFixed(1) + '%';
-  $('acc-val').textContent  = acc.toFixed(1) + '%';
+  $('ab-fill').style.width = acc + '%';
+  $('ab-pct').textContent  = acc.toFixed(1) + '%';
+  $('acc-val').textContent = acc.toFixed(1) + '%';
 
-  // ── Score ring ──
   const circumference = 326.7;
   $('score-ring-fill').style.strokeDashoffset = circumference - (acc / 100) * circumference;
   $('score-num').textContent = Math.round(acc);
 
-  // Ring colour
   const ringColors = { perfect:'#22c55e', good:'#4ade80', warning:'#f59e0b', error:'#ef4444' };
   $('score-ring-fill').style.stroke = ringColors[alertLevel] || '#f59e0b';
 
-  // Score status + alert
   $('score-status').textContent = acc >= 85 ? fb.good_msg || 'Excellent!' :
                                   acc >= 65 ? 'Getting there!' : 'Needs correction';
   $('score-status').className   = `score-status${acc >= 85 ? ' good' : acc < 55 ? ' bad' : ''}`;
 
   const alertEl = $('score-alert');
-  alertEl.textContent  = alertMsg;
-  alertEl.className    = `score-alert ${alertLevel}`;
+  alertEl.textContent = alertMsg;
+  alertEl.className   = `score-alert ${alertLevel}`;
 
-  // ── Video alert badge ──
   const badge = $('alert-badge');
   badge.textContent = alertMsg;
   badge.className   = `alert-badge ${alertLevel}`;
@@ -217,7 +337,6 @@ function updateUI(d) {
   clearTimeout(badge._t);
   badge._t = setTimeout(() => badge.classList.add('hidden'), 3500);
 
-  // ── Detected pose ──
   $('detected-pose-name').textContent = `${emoji} ${dispName}`;
   $('detected-pose-desc').textContent = fb.description || '';
   $('pdc-dot').classList.add('active');
@@ -233,28 +352,24 @@ function updateUI(d) {
     db.classList.remove('hidden');
   }
 
-  // ── Annotated frame ──
   if (d.annotated_frame) {
     const ov = $('annotated-overlay');
     ov.src = d.annotated_frame;
     ov.classList.remove('hidden');
   }
 
-  // ── Cues ──
   if (fb.cues?.length) {
     $('cues-list').innerHTML = fb.cues.map(c => `<div class="cue-item">${c}</div>`).join('');
   }
 
-  // ── Corrections ──
   const corrections = fb.corrections || [];
-  if (corrections.length && !isCorrect) {
+  if (corrections.length && !d.target_matched) {
     $('corrections-card').classList.remove('hidden');
     $('corrections-list').innerHTML = corrections.map(c => `<div class="correction-item">${c}</div>`).join('');
   } else {
     $('corrections-card').classList.add('hidden');
   }
 
-  // ── Streak ──
   if (streakData.current !== undefined) {
     state.currentStreak = streakData.current;
     state.maxStreak     = streakData.max;
@@ -263,28 +378,17 @@ function updateUI(d) {
     $('max-streak').textContent   = streakData.max;
   }
 
-  // ── Correct count ──
-  if (isCorrect) {
-    state.correctCount++;
-    $('correct-count').textContent = state.correctCount;
-  }
-
-  // ── Streak milestone toast ──
   if (streakData.milestone) {
-    showToast(`🔥 ${streakData.current} streak! Amazing form!`, 'success');
+    showToast(`🔥 ${streakData.current} streak! Amazing!`, 'success');
   }
 
-  // ── Session recording ──
-  state.sessionDetections.push({ accuracy: acc, is_correct: isCorrect });
-
-  // ── Voice ──
   const now = Date.now();
   if (state.voiceOn && (now - state.lastVoice) > state.voiceCooldown) {
     let msg = '';
-    if (isCorrect && acc >= 85) {
+    if (d.target_matched && acc >= 85) {
       msg = fb.good_msg || `${dispName}. Excellent form!`;
-      state.voiceCooldown = 7000;
-    } else if (corrections.length && !isCorrect) {
+      state.voiceCooldown = 8000;
+    } else if (!d.target_matched && corrections.length) {
       msg = corrections[0];
       state.voiceCooldown = 5000;
     } else if (fb.cues?.length) {
@@ -327,16 +431,104 @@ function toggleVoice() {
   else window.speechSynthesis?.cancel();
 }
 
+// ─── POSE REFERENCE IMAGE (Wikipedia REST API) ────────────────────────────────
+const WIKI_TITLES = {
+  'tadasana':        'Tadasana',
+  'vrikshasana':     'Vrikshasana',
+  'warrior_i':       'Virabhadrasana_I',
+  'warrior_ii':      'Virabhadrasana_II',
+  'warrior_iii':     'Virabhadrasana_III',
+  'goddess':         'Utkata_Konasana',
+  'downward_dog':    'Downward_Dog_Pose',
+  'cobra':           'Cobra_Pose',
+  'plank':           'Plank_(exercise)',
+  'triangle':        'Trikonasana',
+  'child_pose':      'Child%27s_pose',
+  'chair_pose':      'Utkatasana',
+  'bridge':          'Setu_Bandha_Sarvangasana',
+  'pigeon':          'Pigeon_pose',
+  'camel':           'Ustrasana',
+  'half_moon':       'Ardha_Chandrasana',
+  'boat':            'Navasana',
+  'crow':            'Bakasana',
+  'eagle':           'Garudasana',
+  'lotus':           'Lotus_position',
+  'fish':            'Matsyasana',
+  'seated_forward':  'Paschimottanasana',
+  'supine_twist':    'Supta_Matsyendrasana',
+  'low_lunge':       'Anjaneyasana',
+  'side_plank':      'Vasisthasana',
+};
+
+async function loadPoseReferenceImage(pose) {
+  const loading     = $('ref-img-loading');
+  const img         = $('pose-ref-img');
+  const placeholder = $('ref-img-placeholder');
+  const badge       = $('prc-badge');
+  const phEmoji     = $('ref-ph-emoji');
+
+  if (!img) return;
+  img.classList.add('hidden');
+  if (placeholder) placeholder.classList.add('hidden');
+  if (loading) { loading.classList.remove('hidden'); loading.innerHTML = '<div class="ref-spinner"></div><span>Loading photo…</span>'; }
+
+  const title = WIKI_TITLES[pose];
+  if (!title) {
+    if (loading) loading.classList.add('hidden');
+    if (placeholder) { placeholder.classList.remove('hidden'); if (phEmoji) phEmoji.textContent = state.allPoseData[pose]?.emoji || '🧘'; }
+    return;
+  }
+
+  try {
+    const r = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${title}`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    const d = await r.json();
+    if (d.thumbnail?.source) {
+      img.src = d.thumbnail.source;
+      img.onload = () => {
+        if (loading) loading.classList.add('hidden');
+        img.classList.remove('hidden');
+        if (badge) badge.textContent = 'Wikipedia';
+      };
+      img.onerror = () => showPlaceholder(pose);
+    } else {
+      showPlaceholder(pose);
+    }
+  } catch(e) {
+    showPlaceholder(pose);
+  }
+}
+
+function showPlaceholder(pose) {
+  const loading     = $('ref-img-loading');
+  const placeholder = $('ref-img-placeholder');
+  const phEmoji     = $('ref-ph-emoji');
+  if (loading) loading.classList.add('hidden');
+  if (placeholder) {
+    placeholder.classList.remove('hidden');
+    if (phEmoji) phEmoji.textContent = state.allPoseData[pose]?.emoji || '🧘';
+  }
+}
+
 // ─── POSE SELECTION ───────────────────────────────────────────────────────────
 function selectPose(pose) {
-  state.targetPose = pose;
-  const poseData   = state.allPoseData[pose] || {};
-  const dispName   = poseData.display_name || pose.replace(/_/g,' ');
-  const emoji      = poseData.emoji || '🧘';
+  // Prevent switching while camera is live
+  if (state.cameraOn) {
+    showToast('Stop the camera before selecting a different pose.', 'warning');
+    return;
+  }
 
-  // Reset session per-pose stats
-  state.correctCount = 0;
+  state.targetPose = pose;
+  state.repCount   = 0;
   $('correct-count').textContent = '0';
+  resetHoldTimer();
+  loadPoseReferenceImage(pose);
+
+  const poseData = state.allPoseData[pose] || {};
+  const dispName = poseData.display_name || pose.replace(/_/g,' ');
+  const emoji    = poseData.emoji || '🧘';
 
   $('target-pose-label').textContent = `Target: ${emoji} ${dispName}`;
   $('target-pose-label').style.color = '#22c55e';
@@ -346,9 +538,8 @@ function selectPose(pose) {
   document.querySelectorAll('.ref-card').forEach(c =>
     c.classList.toggle('active', c.id === 'ref-' + pose));
 
-  if (poseData.cues?.length) {
+  if (poseData.cues?.length)
     $('cues-list').innerHTML = poseData.cues.map(c => `<div class="cue-item">${c}</div>`).join('');
-  }
   if (poseData.description) $('detected-pose-desc').textContent = poseData.description;
   if (poseData.difficulty) {
     const colors = { Beginner:'#22c55e', Intermediate:'#f59e0b', Advanced:'#ef4444' };
@@ -364,7 +555,13 @@ function selectPose(pose) {
     state.lastVoice = Date.now();
   }
 
-  if (!state.cameraOn) showToast(`Selected: ${emoji} ${dispName}. Press Space to start camera!`, 'info');
+  showToast(`Selected: ${emoji} ${dispName}. Press Space to start camera!`, 'info');
+}
+
+function getPoseName(pose) {
+  if (!pose) return 'your pose';
+  const pd = state.allPoseData[pose];
+  return pd ? pd.display_name : pose.replace(/_/g,' ');
 }
 
 // ─── RESET ────────────────────────────────────────────────────────────────────
@@ -375,7 +572,7 @@ function resetUI() {
   $('ab-pct').textContent    = '0%';
   $('acc-val').textContent   = '–';
   $('detected-pose-name').textContent = 'Waiting…';
-  $('detected-pose-desc').textContent = 'Start camera and select a target pose';
+  $('detected-pose-desc').textContent = 'Start camera and get into position';
   $('pdc-dot').classList.remove('active');
   $('score-status').textContent = 'No pose detected';
   $('score-status').className   = 'score-status';
@@ -386,10 +583,20 @@ function resetUI() {
   $('pdc-benefits').classList.add('hidden');
   $('vc-message').textContent = 'Voice feedback will guide your pose corrections.';
   $('session-timer').textContent = '0:00';
-  state.holdSeconds   = 0;
-  state.correctCount  = 0;
-  state.sessionStreak = 0;
+  state.sessionSeconds = 0;
+  state.repCount       = 0;
+  state.sessionStreak  = 0;
   $('correct-count').textContent = '0';
+}
+
+// ─── UTILITY ──────────────────────────────────────────────────────────────────
+async function api(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return r.json();
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
@@ -419,7 +626,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await loadPoseData();
-  loadSidebarUser();
+
+  // Inject hold-progress bar into page dynamically if not in practice.html
+  if (!$('hold-bar-fill')) {
+    const anchor = $('score-alert')?.parentElement;
+    if (anchor) {
+      const holdDiv = document.createElement('div');
+      holdDiv.style.cssText = 'margin:14px 0 8px;padding:0 4px;';
+      holdDiv.innerHTML = `
+        <div id="hold-bar-label"
+             style="font-size:12px;color:#9ba8a0;margin-bottom:6px;text-align:center;">
+          Hold the pose for 15s to count a rep
+        </div>
+        <div style="background:rgba(255,255,255,0.08);border-radius:8px;
+                    height:10px;overflow:hidden;">
+          <div id="hold-bar-fill"
+               style="height:100%;width:0%;
+                      background:linear-gradient(90deg,#22c55e,#4ade80);
+                      border-radius:8px;transition:width 0.25s linear;">
+          </div>
+        </div>`;
+      anchor.appendChild(holdDiv);
+    }
+  }
+
+  if (typeof loadSidebarUser === 'function') loadSidebarUser();
 
   const pose = new URLSearchParams(window.location.search).get('pose');
   selectPose(pose || 'tadasana');

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Feedback – ZenPose{% endblock %}
+{% block body %}
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/" class="sidebar-brand">
+      <span class="brand-icon">🧘</span><span class="brand-name">ZenPose</span>
+    </a>
+    <nav class="sidebar-nav">
+      <a href="/dashboard"  class="nav-item"><span class="ni">📊</span> Dashboard</a>
+      <a href="/practice"   class="nav-item"><span class="ni">🎯</span> Practice</a>
+      <a href="/meditation" class="nav-item"><span class="ni">🎵</span> Meditation</a>
+      <a href="/insights"   class="nav-item"><span class="ni">🌿</span> Do You Know</a>
+      <a href="/feedback"   class="nav-item active nav-item-soon"><span class="ni">💬</span> Feedback <span class="soon-tag">Soon</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <div class="user-info">
+          <div class="user-name"  id="sidebar-name">Loading…</div>
+          <div class="user-email" id="sidebar-email">…</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">⏻ Logout</button>
+    </div>
+  </aside>
+  <main class="main-content" style="display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;padding:60px 20px;">
+      <div style="font-size:4rem;margin-bottom:20px;">💬</div>
+      <h1 style="font-family:var(--font-serif);font-size:2.2rem;margin-bottom:12px;">Feedback</h1>
+      <p style="color:var(--text-2);font-size:1rem;max-width:380px;margin:0 auto 28px;">Community feedback &amp; ratings are coming in a future update. We'd love to hear from you!</p>
+      <a href="/dashboard" class="btn-primary">← Back to Dashboard</a>
+    </div>
+  </main>
+</div>
+{% endblock %}
+{% block extra_js %}<script>document.addEventListener('DOMContentLoaded',()=>{if(typeof loadSidebarUser==='function')loadSidebarUser();});</script>{% endblock %}

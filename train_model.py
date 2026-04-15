@@ -126,7 +126,7 @@ def generate_pose_keypoints(pose_name, n_samples=400):
 
 def train_and_save():
     print("=" * 60)
-    print("  ZenPose — Training 25 Pose Model")
+    print("  ZenPose - Training 25 Pose Model")
     print("=" * 60)
     X_list, y_list = [], []
     for pose in POSE_LABELS:
@@ -137,7 +137,7 @@ def train_and_save():
 
     X = np.vstack(X_list)
     y = np.array(y_list)
-    print(f"\n  Dataset: {X.shape[0]} samples × {X.shape[1]} features")
+    print(f"\n  Dataset: {X.shape[0]} samples x {X.shape[1]} features")
 
     le = LabelEncoder()
     y_enc = le.fit_transform(y)
@@ -147,10 +147,10 @@ def train_and_save():
         ('sc', StandardScaler()),
         ('clf', RandomForestClassifier(n_estimators=300, max_depth=18, min_samples_split=4, random_state=42, n_jobs=-1)),
     ])
-    print("  Training…")
+    print("  Training...")
     pipe.fit(X_tr, y_tr)
     acc = accuracy_score(y_te, pipe.predict(X_te))
-    print(f"  ✓ Accuracy: {acc*100:.2f}%\n")
+    print(f"  [OK] Accuracy: {acc*100:.2f}%\n")
     print(classification_report(y_te, pipe.predict(X_te), target_names=le.classes_))
 
     os.makedirs('models', exist_ok=True)
@@ -159,7 +159,7 @@ def train_and_save():
     pickle.dump({'labels':POSE_LABELS,'display_names':POSE_DISPLAY_NAMES,'emojis':POSE_EMOJIS,
                  'categories':POSE_CATEGORIES,'feedback':POSE_FEEDBACK},
                 open('models/pose_metadata.pkl','wb'))
-    print("  ✓ Models saved to models/")
+    print("  [OK] Models saved to models/")
     print("=" * 60)
 
 if __name__ == "__main__":

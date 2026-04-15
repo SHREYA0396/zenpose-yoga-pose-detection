@@ -1,0 +1,193 @@
+/* ─── INSIGHTS / DO YOU KNOW PAGE ─────────────────────────────────────── */
+.ins-main { flex: 1; padding: 24px 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+
+/* TAB NAV */
+.ins-tabs {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: 14px; padding: 6px;
+  width: fit-content;
+}
+.ins-tab {
+  background: none; border: none; color: var(--text-2);
+  font-family: var(--font-sans); font-size: 0.85rem; font-weight: 600;
+  padding: 9px 20px; border-radius: 10px; cursor: pointer; transition: all 0.2s;
+}
+.ins-tab:hover { color: var(--text); background: var(--bg-2); }
+.ins-tab.active {
+  background: rgba(34,197,94,0.12); color: var(--green-light);
+  border: 1px solid rgba(34,197,94,0.25);
+}
+
+/* TAB CONTENT */
+.ins-tab-content { display: none; }
+.ins-tab-content.active { display: block; }
+
+/* ── FACTS GRID ────────────────────────────────────────────────────────── */
+.facts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.fact-card {
+  background: var(--bg-1); border-radius: 18px; padding: 26px;
+  border-left: 4px solid transparent;
+  position: relative; overflow: hidden;
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.fact-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+.fc-green { border-color: var(--green); background: linear-gradient(135deg, var(--bg-2) 0%, rgba(34,197,94,0.04) 100%); }
+.fc-gold  { border-color: var(--gold);  background: linear-gradient(135deg, var(--bg-2) 0%, rgba(212,168,83,0.04) 100%); }
+.fc-blue  { border-color: #60a5fa;     background: linear-gradient(135deg, var(--bg-2) 0%, rgba(96,165,250,0.04) 100%); }
+.fc-num {
+  position: absolute; top: 14px; right: 18px;
+  font-family: var(--font-serif); font-size: 2.5rem; font-weight: 700;
+  color: rgba(255,255,255,0.04); line-height: 1;
+}
+.fc-icon { font-size: 1.8rem; margin-bottom: 14px; display: block; }
+.fact-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; line-height: 1.3; }
+.fact-card p { font-size: 0.83rem; color: var(--text-2); line-height: 1.7; }
+
+/* ── HERBS ─────────────────────────────────────────────────────────────── */
+.herbs-intro {
+  font-size: 0.9rem; color: var(--text-2); line-height: 1.7;
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 20px; margin-bottom: 20px;
+}
+
+.herbs-grid { display: flex; flex-direction: column; gap: 16px; }
+
+.herb-card {
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: 18px; overflow: hidden;
+  border-left: 4px solid var(--herb-color, var(--green));
+}
+.herb-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 22px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.herb-emoji { font-size: 2rem; flex-shrink: 0; }
+.herb-header > div { flex: 1; }
+.herb-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 3px; color: var(--herb-color, var(--green-light)); }
+.herb-latin { font-size: 0.72rem; color: var(--text-3); font-style: italic; }
+.herb-tag {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 20px;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+  color: var(--text-2); white-space: nowrap;
+}
+
+.herb-body { padding: 18px 22px; }
+.herb-desc {
+  font-size: 0.85rem; color: var(--text-2); line-height: 1.7; margin-bottom: 16px;
+  border-left: 2px solid var(--herb-color, var(--green));
+  padding-left: 14px;
+}
+
+.herb-benefits { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.hb-row { display: flex; gap: 12px; align-items: flex-start; font-size: 0.82rem; color: var(--text-2); line-height: 1.5; }
+.hb-label {
+  flex-shrink: 0; font-size: 0.65rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 12px; white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+.hb-label.mind { background: rgba(96,165,250,0.15); color: #93c5fd; border: 1px solid rgba(96,165,250,0.2); }
+.hb-label.body { background: rgba(34,197,94,0.12); color: var(--green-light); border: 1px solid rgba(34,197,94,0.2); }
+
+.herb-use {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 16px;
+  font-size: 0.82rem; color: var(--text-2); line-height: 1.6;
+}
+.hu-label { font-weight: 700; color: var(--gold); margin-right: 6px; }
+
+/* ── POSE IMPACTS ──────────────────────────────────────────────────────── */
+.poses-intro {
+  font-size: 0.88rem; color: var(--text-2); line-height: 1.7;
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 20px; margin-bottom: 20px;
+}
+.poses-intro em { color: var(--green-light); font-style: normal; font-weight: 600; }
+
+.pose-impacts-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.pose-impact-card {
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+  cursor: pointer; transition: border-color 0.2s;
+}
+.pose-impact-card:hover { border-color: var(--border-g); }
+.pose-impact-card.open { border-color: var(--green); }
+
+.pic-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px; user-select: none;
+}
+.pic-emoji { font-size: 1.6rem; flex-shrink: 0; }
+.pic-names { flex: 1; }
+.pic-skt { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+.pic-eng { font-size: 0.75rem; color: var(--text-2); }
+.pic-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.pic-diff {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 10px;
+}
+.diff-beginner     { background: rgba(34,197,94,0.15); color: var(--green-light); }
+.diff-intermediate { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.diff-advanced     { background: rgba(239,68,68,0.15);  color: #f87171; }
+.pic-cat {
+  font-size: 0.62rem; color: var(--gold); border: 1px solid rgba(212,168,83,0.25);
+  padding: 3px 9px; border-radius: 10px; background: rgba(212,168,83,0.08);
+}
+.pic-arrow {
+  font-size: 1.2rem; color: var(--text-3); transition: transform 0.3s;
+  display: flex; align-items: center;
+}
+.pose-impact-card.open .pic-arrow { transform: rotate(90deg); color: var(--green-light); }
+
+/* Body — hidden until open */
+.pic-body {
+  display: none; padding: 0 20px 20px;
+  border-top: 1px solid var(--border);
+  animation: fadeIn 0.2s ease;
+}
+.pose-impact-card.open .pic-body { display: block; }
+
+.pic-tagline {
+  font-family: var(--font-serif); font-size: 1.05rem; color: var(--text-2);
+  font-style: italic; padding: 14px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.pic-sections { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.pic-sec { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.pic-sec-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .pic-sec-row { grid-template-columns: 1fr; } }
+.pic-sec-title { font-size: 0.75rem; font-weight: 700; color: var(--green-light); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+.pic-sec p { font-size: 0.82rem; color: var(--text-2); line-height: 1.65; }
+
+.pic-practice-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
+  color: var(--green-light); font-size: 0.82rem; font-weight: 600;
+  padding: 8px 18px; border-radius: 20px;
+  transition: all 0.2s;
+}
+.pic-practice-btn:hover {
+  background: rgba(34,197,94,0.2); border-color: var(--green);
+  transform: translateX(2px);
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* SOON TAG (shared) */
+.nav-item-soon { opacity: 0.7; pointer-events: none; }
+.soon-tag {
+  font-size: 0.55rem; background: rgba(212,168,83,0.2); color: var(--gold);
+  border: 1px solid rgba(212,168,83,0.3); padding: 1px 6px; border-radius: 10px;
+  margin-left: 4px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+}

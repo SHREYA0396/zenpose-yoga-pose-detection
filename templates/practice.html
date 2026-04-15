@@ -9,8 +9,11 @@
       <span class="brand-icon">🧘</span><span class="brand-name">ZenPose</span>
     </a>
     <nav class="sidebar-nav">
-      <a href="/dashboard" class="nav-item"><span class="ni">📊</span> Dashboard</a>
-      <a href="/practice"  class="nav-item active"><span class="ni">🎯</span> Practice</a>
+      <a href="/dashboard"  class="nav-item"><span class="ni">📊</span> Dashboard</a>
+      <a href="/practice"   class="nav-item active"><span class="ni">🎯</span> Practice</a>
+      <a href="/meditation" class="nav-item"><span class="ni">🎵</span> Meditation</a>
+      <a href="/insights"   class="nav-item"><span class="ni">🌿</span> Do You Know</a>
+      <a href="/feedback"   class="nav-item nav-item-soon"><span class="ni">💬</span> Feedback <span class="soon-tag">Soon</span></a>
     </nav>
     <div class="sidebar-poses">
       <div class="sp-label">Select Pose (25)</div>
@@ -109,6 +112,26 @@
 
       <!-- FEEDBACK PANEL -->
       <div class="feedback-panel">
+        <!-- Pose Reference Photo -->
+        <div class="feedback-card pose-ref-card">
+          <div class="prc-header">
+            <span class="prc-icon">📸</span>
+            <span class="prc-title">Reference Photo</span>
+            <span class="prc-badge" id="prc-badge"></span>
+          </div>
+          <div class="pose-ref-wrap" id="pose-ref-wrap">
+            <div class="ref-img-loading" id="ref-img-loading">
+              <div class="ref-spinner"></div>
+              <span>Loading photo…</span>
+            </div>
+            <img id="pose-ref-img" class="pose-ref-img hidden" alt="Pose reference" loading="lazy"/>
+            <div class="ref-img-placeholder hidden" id="ref-img-placeholder">
+              <span class="ref-ph-emoji" id="ref-ph-emoji">🧘</span>
+              <span class="ref-ph-text">No photo available</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Detected pose -->
         <div class="feedback-card pose-detected-card">
           <div class="pdc-header">

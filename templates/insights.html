@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+{% block title %}Do You Know – ZenPose{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/insights.css"/>{% endblock %}
+{% block body %}
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/" class="sidebar-brand">
+      <span class="brand-icon">🧘</span><span class="brand-name">ZenPose</span>
+    </a>
+    <nav class="sidebar-nav">
+      <a href="/dashboard"  class="nav-item"><span class="ni">📊</span> Dashboard</a>
+      <a href="/practice"   class="nav-item"><span class="ni">🎯</span> Practice</a>
+      <a href="/meditation" class="nav-item"><span class="ni">🎵</span> Meditation</a>
+      <a href="/insights"   class="nav-item active"><span class="ni">🌿</span> Do You Know</a>
+      <a href="/feedback"   class="nav-item nav-item-soon"><span class="ni">💬</span> Feedback <span class="soon-tag">Soon</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <div class="user-info">
+          <div class="user-name"  id="sidebar-name">Loading…</div>
+          <div class="user-email" id="sidebar-email">…</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">⏻ Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content ins-main">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Do You Know?</h1>
+        <p class="page-sub">Wisdom of yoga, Ayurvedic herbs &amp; the science behind every pose</p>
+      </div>
+    </header>
+
+    <!-- ── TAB NAV ────────────────────────────────────────────────── -->
+    <div class="ins-tabs">
+      <button class="ins-tab active" onclick="showTab('facts',this)">✨ Yoga Insights</button>
+      <button class="ins-tab"        onclick="showTab('herbs',this)">🌿 Healing Herbs</button>
+      <button class="ins-tab"        onclick="showTab('poses',this)">🧘 Pose Impacts</button>
+    </div>
+
+    <!-- ══ TAB: YOGA INSIGHTS ═════════════════════════════════════ -->
+    <div id="tab-facts" class="ins-tab-content active">
+      <div class="facts-grid">
+
+        <div class="fact-card fc-green">
+          <span class="fc-num">01</span>
+          <div class="fc-icon">🌅</div>
+          <h3>Yoga is 5,000+ Years Old</h3>
+          <p>The word "yoga" first appears in the Rigveda (~1500 BCE). From ancient Indian forests to modern studios worldwide — it is one of humanity's oldest living sciences of wellbeing.</p>
+        </div>
+
+        <div class="fact-card fc-gold">
+          <span class="fc-num">02</span>
+          <div class="fc-icon">🧠</div>
+          <h3>Meditation Physically Rewires Your Brain</h3>
+          <p>Harvard neuroscientists found that after 8 weeks of daily mindfulness, the amygdala (fear centre) shrinks, and the prefrontal cortex (reasoning) measurably thickens. Your brain literally grows in wisdom.</p>
+        </div>
+
+        <div class="fact-card fc-blue">
+          <span class="fc-num">03</span>
+          <div class="fc-icon">💪</div>
+          <h3>One Flow Works All Major Muscles</h3>
+          <p>Surya Namaskar (Sun Salutation) activates all 12 major muscle groups in one continuous sequence. Doing 12 rounds burns approximately 156 calories — the equivalent of 20 minutes of running.</p>
+        </div>
+
+        <div class="fact-card fc-green">
+          <span class="fc-num">04</span>
+          <div class="fc-icon">🩺</div>
+          <h3>Yoga Cuts Cortisol by 30%</h3>
+          <p>Peer-reviewed studies show that 12 weeks of regular yoga practice reduces cortisol (the primary stress hormone) by up to 30%, lowering blood pressure and improving immune function simultaneously.</p>
+        </div>
+
+        <div class="fact-card fc-gold">
+          <span class="fc-num">05</span>
+          <div class="fc-icon">🫁</div>
+          <h3>Your Breath Controls Your Nervous System</h3>
+          <p>Slow, deep breathing (5–6 breaths/min) activates the parasympathetic nervous system within 90 seconds. This is faster than any supplement — and it's built into you. Pranayama is the original biohack.</p>
+        </div>
+
+        <div class="fact-card fc-blue">
+          <span class="fc-num">06</span>
+          <div class="fc-icon">🌍</div>
+          <h3>500 Million People Meditate Daily</h3>
+          <p>An estimated 500 million people worldwide practice some form of meditation. It transcends religion, culture, and language — from Tibetan monks to corporate boardrooms to Olympic training camps.</p>
+        </div>
+
+        <div class="fact-card fc-green">
+          <span class="fc-num">07</span>
+          <div class="fc-icon">🌙</div>
+          <h3>Yoga Transforms Sleep Quality</h3>
+          <p>Regular practitioners fall asleep 15 minutes faster on average, experience 40% longer deep-sleep phases, and wake 30% less during the night. Even a 10-minute Yoga Nidra session equals 1 hour of deep sleep.</p>
+        </div>
+
+        <div class="fact-card fc-gold">
+          <span class="fc-num">08</span>
+          <div class="fc-icon">🔬</div>
+          <h3>Yoga Raises Your Brain's GABA</h3>
+          <p>Boston University MRI studies found yoga increases GABA levels by 27% after a single session. GABA is the same calming neurotransmitter targeted by anti-anxiety medications — yoga achieves it naturally.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ TAB: HEALING HERBS ══════════════════════════════════════ -->
+    <div id="tab-herbs" class="ins-tab-content">
+      <p class="herbs-intro">Ayurveda — yoga's sister science — has documented these herbs over 5,000 years. They work synergistically with yoga practice to amplify mental clarity, physical strength, and emotional resilience.</p>
+
+      <div class="herbs-grid">
+
+        <div class="herb-card" style="--herb-color:#22c55e">
+          <div class="herb-header">
+            <span class="herb-emoji">🌿</span>
+            <div>
+              <h3 class="herb-name">Ashwagandha</h3>
+              <span class="herb-latin">Withania somnifera · Indian Ginseng</span>
+            </div>
+            <span class="herb-tag">Adaptogen</span>
+          </div>
+          <div class="herb-body">
+            <p class="herb-desc">The king of Ayurvedic herbs. Ashwagandha means "smell of horse" — it gives you the strength and vitality of a horse. Used for 3,000 years to build resilience to physical and mental stress.</p>
+            <div class="herb-benefits">
+              <div class="hb-row"><span class="hb-label mind">🧠 Mind</span><span>Reduces cortisol &amp; anxiety, improves sleep, sharpens memory and focus</span></div>
+              <div class="hb-row"><span class="hb-label body">💪 Body</span><span>Increases muscle strength &amp; endurance, reduces inflammation, boosts testosterone</span></div>
+            </div>
+            <div class="herb-use">
+              <span class="hu-label">How to use:</span>
+              ½ tsp powder in warm milk or water before bed. Or 300–500mg capsule with meals.
+            </div>
+          </div>
+        </div>
+
+        <div class="herb-card" style="--herb-color:#4ade80">
+          <div class="herb-header">
+            <span class="herb-emoji">🌱</span>
+            <div>
+              <h3 class="herb-name">Tulsi (Holy Basil)</h3>
+              <span class="herb-latin">Ocimum tenuiflorum · Queen of Herbs</span>
+            </div>
+            <span class="herb-tag">Sacred</span>
+          </div>
+          <div class="herb-body">
+            <p class="herb-desc">Called "The Queen of Herbs" in Ayurveda, Tulsi is sacred in every Hindu household. This powerful adaptogen has been used for millennia to purify the body, mind, and environment.</p>
+            <div class="herb-benefits">
+              <div class="hb-row"><span class="hb-label mind">🧠 Mind</span><span>Elevates mood, combats mental fatigue, reduces anxiety and emotional stress</span></div>
+              <div class="hb-row"><span class="hb-label body">💪 Body</span><span>Antibacterial, antifungal, supports respiratory &amp; immune health, lowers blood sugar</span></div>
+            </div>
+            <div class="herb-use">
+              <span class="hu-label">How to use:</span>
+              Brew 5–7 fresh leaves in hot water for 5 minutes. Drink daily as morning tea. Or Tulsi drops (10 drops in water).
+            </div>
+          </div>
+        </div>
+
+        <div class="herb-card" style="--herb-color:#60a5fa">
+          <div class="herb-header">
+            <span class="herb-emoji">🧠</span>
+            <div>
+              <h3 class="herb-name">Brahmi</h3>
+              <span class="herb-latin">Bacopa monnieri · Water Hyssop</span>
+            </div>
+            <span class="herb-tag">Nootropic</span>
+          </div>
+          <div class="herb-body">
+            <p class="herb-desc">Named after Brahma — the Hindu god of creation — Brahmi is yoga's favourite brain herb. Ancient scholars consumed it for memory enhancement and accelerated learning. Modern neuroscience confirms it works.</p>
+            <div class="herb-benefits">
+              <div class="hb-row"><span class="hb-label mind">🧠 Mind</span><span>Enhances memory formation, reduces anxiety, improves concentration and cognitive speed</span></div>
+              <div class="hb-row"><span class="hb-label body">💪 Body</span><span>Reduces oxidative stress, supports nervous system, anti-inflammatory for brain tissue</span></div>
+            </div>
+            <div class="herb-use">
+              <span class="hu-label">How to use:</span>
+              2–3 drops Brahmi oil massaged into scalp nightly. Or 300 mg Bacopa extract capsule with breakfast. Takes 4–6 weeks to see peak effects.
+            </div>
+          </div>
+        </div>
+
+        <div class="herb-card" style="--herb-color:#fbbf24">
+          <div class="herb-header">
+            <span class="herb-emoji">💛</span>
+            <div>
+              <h3 class="herb-name">Turmeric</h3>
+              <span class="herb-latin">Curcuma longa · Golden Spice</span>
+            </div>
+            <span class="herb-tag">Anti-inflammatory</span>
+          </div>
+          <div class="herb-body">
+            <p class="herb-desc">Turmeric's active compound curcumin is one of the most studied natural substances. It crosses the blood-brain barrier, reduces neuroinflammation, and genuinely rivals antidepressants in clinical trials.</p>
+            <div class="herb-benefits">
+              <div class="hb-row"><span class="hb-label mind">🧠 Mind</span><span>Boosts serotonin &amp; dopamine, reduces depression, protects against cognitive decline</span></div>
+              <div class="hb-row"><span class="hb-label body">💪 Body</span><span>Powerful anti-inflammatory, joint protection, liver detox, antioxidant at cellular level</span></div>
+            </div>
+            <div class="herb-use">
+              <span class="hu-label">How to use:</span>
+              Golden milk: 1 tsp turmeric + pinch of black pepper in warm milk. The pepper increases curcumin absorption by 2000%. Daily with meals.
+            </div>
+          </div>
+        </div>
+
+        <div class="herb-card" style="--herb-color:#f472b6">
+          <div class="herb-header">
+            <span class="herb-emoji">🌸</span>
+            <div>
+              <h3 class="herb-name">Shatavari</h3>
+              <span class="herb-latin">Asparagus racemosus · She Who Has 100 Husbands</span>
+            </div>
+            <span class="herb-tag">Rejuvenating</span>
+          </div>
+          <div class="herb-body">
+            <p class="herb-desc">Shatavari is Ayurveda's premier tonic for vitality, hormonal harmony, and deep nourishment. While especially revered for women, it is equally beneficial for all — promoting calm, strength and longevity.</p>
+            <div class="herb-benefits">
+              <div class="hb-row"><span class="hb-label mind">🧠 Mind</span><span>Reduces anxiety &amp; emotional instability, promotes calm, stabilises mood</span></div>
+              <div class="hb-row"><span class="hb-label body">💪 Body</span><span>Hormonal balance, immune strength, digestive health, anti-aging, builds Ojas (vital essence)</span></div>
+            </div>
+            <div class="herb-use">
+              <span class="hu-label">How to use:</span>
+              1 tsp Shatavari powder in warm milk or water, twice daily. Best taken with honey or ghee to enhance absorption.
+            </div>
+          </div>
+        </div>
+
+        <div class="herb-card" style="--herb-color:#a78bfa">
+          <div class="herb-header">
+            <span class="herb-emoji">🫐</span>
+            <div>
+              <h3 class="herb-name">Triphala</h3>
+              <span class="herb-latin">Three Sacred Fruits: Amalaki · Bibhitaki · Haritaki</span>
+            </div>
+            <span class="herb-tag">Detox</span>
+          </div>
+          <div class="herb-body">
+            <p class="herb-desc">Triphala is Ayurveda's most revered formula — three fruits combined for a synergistic effect no single herb achieves alone. Used for 2,000+ years as the complete internal cleanser and rejuvenator.</p>
+            <div class="herb-benefits">
+              <div class="hb-row"><span class="hb-label mind">🧠 Mind</span><span>Clears mental fog through gut-brain axis, reduces stress, supports sharp cognitive function</span></div>
+              <div class="hb-row"><span class="hb-label body">💪 Body</span><span>Detoxifies all three doshas, improves digestion &amp; elimination, rich in Vitamin C, antioxidant</span></div>
+            </div>
+            <div class="herb-use">
+              <span class="hu-label">How to use:</span>
+              ½ tsp Triphala powder in warm water at bedtime. Or 500mg tablet. Start with smaller dose and increase gradually to avoid digestive adjustment.
+            </div>
+          </div>
+        </div>
+
+        <div class="herb-card" style="--herb-color:#34d399">
+          <div class="herb-header">
+            <span class="herb-emoji">🌿</span>
+            <div>
+              <h3 class="herb-name">Moringa</h3>
+              <span class="herb-latin">Moringa oleifera · The Miracle Tree</span>
+            </div>
+            <span class="herb-tag">Superfood</span>
+          </div>
+          <div class="herb-body">
+            <p class="herb-desc">Moringa contains 92 nutrients, 46 antioxidants, and all 9 essential amino acids. Gram for gram: 7x the Vitamin C of oranges, 4x the calcium of milk, 3x the iron of spinach. A complete nutritional powerhouse.</p>
+            <div class="herb-benefits">
+              <div class="hb-row"><span class="hb-label mind">🧠 Mind</span><span>Combats brain fog, improves mental clarity and memory, natural mood elevator</span></div>
+              <div class="hb-row"><span class="hb-label body">💪 Body</span><span>Sustained clean energy, reduces inflammation, regulates blood sugar, strengthens bones</span></div>
+            </div>
+            <div class="herb-use">
+              <span class="hu-label">How to use:</span>
+              1 tsp Moringa leaf powder in morning smoothie, juice, or water. Or add to soups and dals. Start with ½ tsp if new to it.
+            </div>
+          </div>
+        </div>
+
+        <div class="herb-card" style="--herb-color:#86efac">
+          <div class="herb-header">
+            <span class="herb-emoji">🍃</span>
+            <div>
+              <h3 class="herb-name">Giloy (Guduchi)</h3>
+              <span class="herb-latin">Tinospora cordifolia · Heart-Leaved Moonseed</span>
+            </div>
+            <span class="herb-tag">Immunity</span>
+          </div>
+          <div class="herb-body">
+            <p class="herb-desc">Called "Amrita" (divine nectar of immortality) in Sanskrit, Giloy is Ayurveda's premier immune tonic. It was documented during the 2020 pandemic for its remarkable immune-modulating properties.</p>
+            <div class="herb-benefits">
+              <div class="hb-row"><span class="hb-label mind">🧠 Mind</span><span>Reduces stress and anxiety, promotes mental clarity, known as "medhya rasayana" (mind tonic)</span></div>
+              <div class="hb-row"><span class="hb-label body">💪 Body</span><span>Powerful immunity booster, anti-inflammatory, liver protection, detoxifies blood, reduces fever</span></div>
+            </div>
+            <div class="herb-use">
+              <span class="hu-label">How to use:</span>
+              2–4 tsp Giloy juice on empty stomach each morning. Or Giloy kadha (decoction). Or 500mg capsule twice daily with water.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ TAB: POSE IMPACTS ═══════════════════════════════════════ -->
+    <div id="tab-poses" class="ins-tab-content">
+      <p class="poses-intro">Every yoga pose is a precise therapeutic tool. Click any pose to discover <em>why</em> to practice it, what it heals, and how it transforms body &amp; mind.</p>
+
+      <div class="pose-impacts-grid" id="pose-impacts-grid">
+
+        {% set impacts = [
+          ("tadasana","🧍","Tadasana","Mountain Pose","Beginner","Standing",
+           "The foundation of all standing poses — and of how you carry yourself through life.",
+           "Stand like a mountain: rooted, stable, unshakeable. Tadasana aligns the entire skeletal system from feet to crown. Most people discover they've been standing incorrectly their entire lives.",
+           "Strengthens thighs, knees, and ankles. Improves posture. Firms abdomen and buttocks. Relieves sciatica.",
+           "Cultivates deep body awareness. Builds mental stillness. The act of truly standing in one place is surprisingly meditative."),
+          ("vrikshasana","🌲","Vrikshasana","Tree Pose","Beginner","Balance",
+           "Balance is not a physical state — it is a mental one. Master stillness here, master it in life.",
+           "One-legged balance teaches the nervous system to self-regulate. Your gaze, breath, and thought all contribute to staying upright — a real-time biofeedback experience.",
+           "Strengthens calves, thighs, and spine. Stretches the groin, inner thighs, and shoulders. Tones the abdominal muscles.",
+           "Sharpens concentration and focus. Builds patience and mental resilience. Practicing balance literally trains your brain's vestibular cortex."),
+          ("warrior_i","⚔️","Warrior I","Virabhadrasana I","Beginner","Standing",
+           "Named after Virabhadra, a fierce warrior-deity. This pose embodies purposeful strength.",
+           "Warrior I opens the chest to the sky while rooting through the earth — the perfect physical metaphor for aspiration grounded in reality. It builds heat and power quickly.",
+           "Strengthens shoulders, arms, legs, and back. Stretches chest, lungs, hip flexors. Improves focus and balance.",
+           "Cultivates courage and fierce determination. Helps overcome self-doubt. The upward reach expresses aspiration and openness."),
+          ("warrior_ii","🗡️","Warrior II","Virabhadrasana II","Beginner","Standing",
+           "Expanded presence. Arms wide, gaze steady — you hold your ground and see everything.",
+           "Warrior II opens the hips and chest simultaneously while demanding total core engagement. The extended arms build arm endurance faster than most gym exercises.",
+           "Strengthens and stretches legs and ankles. Opens hips and chest. Increases stamina. Relieves backaches.",
+           "Builds confidence and presence. The wide stance and open arms physically embody courage. Teaches equanimity — steady gaze in all directions."),
+          ("warrior_iii","🦅","Warrior III","Virabhadrasana III","Intermediate","Balance",
+           "The most demanding warrior. Body parallel to the earth — suspended between heaven and ground.",
+           "Warrior III requires simultaneous activation of every muscle in the body. The standing leg works at near-maximum capacity while the entire back chain engages to stay parallel.",
+           "Tones the entire body — especially legs, core, and back. Improves balance and posture. Strengthens ankles significantly.",
+           "Develops extraordinary focus. Teaches persistence under difficulty. Achieving this pose builds deep self-efficacy."),
+          ("goddess","🌟","Goddess Pose","Utkata Konasana","Beginner","Standing",
+           "Squat deep into your own power. This pose connects you to primal, grounded feminine strength.",
+           "A powerful standing squat targeting the inner thighs and deep hip flexors — muscles that rarely get activated in sedentary life. Generates significant heat and energy.",
+           "Strengthens quadriceps, glutes, and inner thighs. Opens hips and chest. Tones the entire pelvic floor.",
+           "Awakens primal energy. Builds confidence and personal power. The wide stance is inherently empowering."),
+          ("downward_dog","🐕","Downward Dog","Adho Mukha Svanasana","Beginner","Inversion",
+           "The most practiced pose on Earth. A simultaneous forward fold, inversion, and full-body stretch.",
+           "Downward Dog is yoga's Swiss Army knife — it strengthens arms, decompresses the spine, stretches the hamstrings, and brings fresh blood to the brain. It is both a resting pose and an active strengthener.",
+           "Stretches hamstrings, calves, and spine. Strengthens arms, shoulders, and core. Energises the entire body. Relieves back pain.",
+           "Instantly calms an anxious mind via mild inversion. Fresh blood flow to the brain improves mood and clarity within seconds."),
+          ("cobra","🐍","Cobra Pose","Bhujangasana","Beginner","Backbend",
+           "Open your heart to the world. Cobra counters a lifetime of forward-hunching at screens.",
+           "Every hour you spend at a computer is an hour of chest compression and spinal rounding. Cobra directly reverses this — opening the chest, strengthening the spine, and firing the muscles that modern life ignores.",
+           "Strengthens spine and buttocks. Stretches chest, lungs, shoulders, abdomen. Stimulates abdominal organs. Opens the heart.",
+           "Chest-openers are proven mood elevators. The expansive posture of cobra triggers feelings of confidence and openness — the opposite of the contracted posture of depression."),
+          ("plank","📐","Plank","Phalakasana","Beginner","Core",
+           "The ultimate test of full-body integrated strength. One pose, every muscle, total engagement.",
+           "Plank holds every muscle in your body in simultaneous isometric contraction. It is more effective than crunches for core strength, and builds functional strength that transfers to every physical activity.",
+           "Strengthens core, arms, wrists, and spine. Tones abdomen and lower back. Improves posture significantly.",
+           "Builds mental toughness through sustained discomfort. Regular plankers report improved discipline and mental resilience in non-physical areas of life."),
+          ("triangle","🔺","Triangle Pose","Trikonasana","Beginner","Standing",
+           "The body becomes a triangle — three angles of stretch, stability, and space.",
+           "Triangle opens the side body — one of the most neglected planes of movement in daily life. It simultaneously stretches the spine laterally, opens the hips, and strengthens the legs.",
+           "Stretches and strengthens thighs, knees, and ankles. Opens hips, groins, and spine. Stimulates abdominal organs.",
+           "Improves spatial body awareness. The rotational component activates both brain hemispheres. Relieves mild anxiety through the expansive open-chest position."),
+          ("child_pose","🙏","Child's Pose","Balasana","Beginner","Restorative",
+           "To rest is not to stop — it is to restore. Child's Pose is active recovery and surrender.",
+           "Child's Pose is the antidote to intensity. It gently decompresses the spine, quiets the nervous system, and signals to the body that it is safe to release. It is the most important resting pose in yoga.",
+           "Gently stretches lower back, hips, thighs, knees, and ankles. Relieves back and neck pain. Calms the nervous system.",
+           "Activates the parasympathetic nervous system rapidly. The fetal position is neurologically associated with safety and calm. Use anytime you feel overwhelmed."),
+          ("chair_pose","🪑","Chair Pose","Utkatasana","Beginner","Standing",
+           "Sit in the air. Build the strength that makes everything else easier.",
+           "Chair Pose is an intense quadricep and glute strengthener disguised as a balance pose. It generates enormous heat and metabolic demand while requiring simultaneous upper body engagement.",
+           "Strengthens quadriceps, glutes, and calves. Stretches shoulders and chest. Stimulates the heart and diaphragm.",
+           "Builds determination and willpower. Holding an uncomfortable position teaches the distinction between pain (injury) and discomfort (growth)."),
+          ("bridge","🌉","Bridge Pose","Setu Bandha Sarvangasana","Beginner","Backbend",
+           "Lift your heart. Bridge Pose opens the chest and strengthens the entire posterior chain.",
+           "Bridge is Yoga's answer to the posterior chain weakness caused by sitting. It fires the glutes, hamstrings, and lower back while gently opening the chest and throat — reversing the most common modern-life posture pattern.",
+           "Strengthens glutes, hamstrings, and back. Opens chest, neck, and spine. Stimulates thyroid. Reduces anxiety.",
+           "Thyroid stimulation from the throat compression has been shown to regulate mood and metabolism. The chest-open position itself is physiologically calming."),
+          ("pigeon","🕊️","Pigeon Pose","Eka Pada Kapotasana","Intermediate","Hip Opener",
+           "The hips store emotion. Pigeon Pose is the deepest release — physical and emotional.",
+           "The hip flexors and external rotators hold years of unprocessed stress, tension, and even trauma. Pigeon pose systematically releases the iliopsoas, piriformis, and deep external rotators — often triggering unexpected emotional release.",
+           "Deeply stretches hip flexors and external rotators. Opens the chest when folding. Stimulates abdominal organs and urinary bladder.",
+           "Hip openers are uniquely associated with emotional release. Many practitioners report unexpected sadness or relief during pigeon — a sign of stored tension releasing. This is healing, not injury."),
+          ("camel","🐫","Camel Pose","Ustrasana","Intermediate","Backbend",
+           "The deepest front-body opening in yoga. Vulnerability and strength exist simultaneously here.",
+           "Camel opens the entire anterior chain — hip flexors, abdomen, chest, throat — all at once. It requires courage to drop the head back and trust. The full spinal extension in Camel is profound.",
+           "Stretches entire front body — thighs, hip flexors, abdomen, chest, throat. Strengthens back muscles. Improves spinal flexibility.",
+           "The vulnerability of exposing the heart and throat activates courage. Many people feel a rush of energy or emotion in camel — this is the opening of Anahata (heart chakra) and Vishuddha (throat chakra)."),
+          ("half_moon","🌙","Half Moon","Ardha Chandrasana","Intermediate","Balance",
+           "Balance on the edge of the moon. Grace under challenge — the essence of advanced yoga.",
+           "Half Moon demands balance on one foot while the body opens sideways — rotating hip over hip, stacking the entire skeletal system vertically. It requires every core stabiliser firing simultaneously.",
+           "Strengthens ankles, legs, glutes, and spine. Opens hips and chest. Improves coordination and balance significantly.",
+           "The precision and attention required create a moving meditation. Mastering Half Moon builds profound body confidence."),
+          ("boat","⛵","Boat Pose","Navasana","Intermediate","Core",
+           "Your body becomes a vessel. Strong core, steady keel — nothing can capsize you.",
+           "Boat pose is pure core fire. Balancing on the sit bones while extending legs and arms activates the deep transverse abdominis, hip flexors, and spinal extensors simultaneously.",
+           "Strengthens deep core, hip flexors, and spine. Improves digestion and kidney function. Tones abdominal organs.",
+           "Builds confidence through core strength. There is a profound sense of capability that develops when you can hold Boat for 30+ seconds without wavering."),
+          ("crow","🐦","Crow Pose","Bakasana","Advanced","Arm Balance",
+           "Fly. The first arm balance most people achieve — and a gateway to fearlessness.",
+           "Crow is as much a mental challenge as a physical one. The fear of falling forward holds most people back — but the actual fall, if it happens, is just 3 inches. Learning to lean into fear is the lesson.",
+           "Strengthens wrists, forearms, and core. Tones abdominal organs. Develops full-body coordination.",
+           "Crow is transformative for confidence. The moment you lift off is viscerally empowering. Students who achieve crow for the first time often describe it as a breakthrough in self-belief."),
+          ("eagle","🦅","Eagle Pose","Garudasana","Intermediate","Balance",
+           "Wrap into yourself. Eagle releases the deepest shoulder and hip tension in one brilliant pose.",
+           "The complex wrapping of limbs in Eagle compresses and then releases the shoulder joints and hip rotators — increasing circulation and releasing the tension that accumulates from desk work and stress.",
+           "Releases tension in shoulders and upper back. Strengthens calves and ankles. Opens hips. Improves balance and focus.",
+           "The inward focus of Eagle — everything wrapping toward centre — is meditative and calming. It teaches introversion as a strength."),
+          ("lotus","🪷","Lotus Pose","Padmasana","Advanced","Seated",
+           "The flower that blooms in muddy water. Lotus is the seat of awakening.",
+           "Lotus is not just a sitting position — it is the most stable seated posture for deep meditation. The locked position prevents the lower body from distracting the mind, allowing consciousness to turn fully inward.",
+           "Opens hips, knees, and ankles over time. Tones the spine. Stimulates pelvis, bladder, and abdomen.",
+           "The traditional meditation seat for all enlightenment traditions. The stability it creates in the body creates stability in the mind. Never force this pose — it opens with patient practice."),
+          ("fish","🐟","Fish Pose","Matsyasana","Beginner","Backbend",
+           "Counterpose to shoulder stand. Fish opens the throat and chest to complete the cycle.",
+           "Fish directly counters the neck compression of Sarvangasana (shoulder stand) but also stands alone as a profound chest and throat opener. The crown of the head on the floor creates a mild inversion.",
+           "Opens chest, throat, and neck. Stretches deep hip flexors. Stimulates thyroid and parathyroid glands. Relieves respiratory issues.",
+           "Thyroid stimulation improves metabolic mood regulation. The open-throat position stimulates the Vishuddha chakra — associated with authentic self-expression and communication."),
+          ("seated_forward","🧘","Seated Forward Bend","Paschimottanasana","Beginner","Forward Bend",
+           "Surrender to gravity. The longest exhale in yoga — a full bow to what is.",
+           "The Sanskrit name means 'intense stretch of the west side of the body' — your entire back body from heels to crown. This pose requires patience more than flexibility; forcing it creates injury, releasing into it creates transformation.",
+           "Stretches spine, shoulders, and hamstrings. Calms the brain. Stimulates liver, kidneys, and ovaries. Improves digestion.",
+           "Forward folds are the most calming class of poses. The closing of the chest in a forward fold signals safety to the nervous system. Regular practice significantly reduces chronic stress."),
+          ("supine_twist","🌀","Supine Twist","Supta Matsyendrasana","Beginner","Twist",
+           "Wring out the spine like a wet cloth. Release every vertebra. Restore natural motion.",
+           "The spine has 33 vertebrae and most people never rotate them individually. Supine twist systematically releases every spinal segment, decompresses intervertebral discs, and stimulates the organs of digestion.",
+           "Releases spinal tension and tightness. Stimulates digestive organs. Opens the chest and shoulders. Therapeutic for back pain.",
+           "Twists are deeply calming. The combination of spinal release and organ massage triggers a parasympathetic response. Many people feel euphoric after a held supine twist."),
+          ("low_lunge","🏹","Low Lunge","Anjaneyasana","Beginner","Standing",
+           "Open the hip flexors — the muscles that hold every step you've ever taken and every stress you've ever felt.",
+           "The psoas — the body's deepest hip flexor — connects the spine to the femur and is directly linked to the fight-or-flight response. Low Lunge is the single most effective psoas opener in yoga.",
+           "Deeply stretches hip flexors, quadriceps, and groin. Strengthens thighs and knees. Improves posture and back pain.",
+           "Releasing tight hip flexors releases chronically held stress. The psoas is nicknamed 'the muscle of the soul' in yoga — its release is profoundly restorative psychologically."),
+          ("side_plank","💎","Side Plank","Vasisthasana","Intermediate","Core",
+           "One arm, one edge, total commitment. Side plank reveals your true functional strength.",
+           "Side Plank is the ultimate oblique and lateral stabiliser. Named after the sage Vasistha, it requires complete lateral body alignment — wrist, elbow, shoulder, hip, knee, and ankle in one perfect line.",
+           "Strengthens arms, wrists, and obliques. Improves balance and full-body coordination. Tones the entire torso.",
+           "There is something deeply clarifying about balancing on one arm. The commitment required — you either are or you aren't — builds decisive mental focus.")
+        ] %}
+
+        {% for pose_id, emoji, skt, eng, diff, cat, tagline, why, physical, mental in impacts %}
+        <div class="pose-impact-card" onclick="toggleImpact(this)">
+          <div class="pic-header">
+            <span class="pic-emoji">{{ emoji }}</span>
+            <div class="pic-names">
+              <div class="pic-skt">{{ skt }}</div>
+              <div class="pic-eng">{{ eng }}</div>
+            </div>
+            <div class="pic-tags">
+              <span class="pic-diff diff-{{ diff|lower }}">{{ diff }}</span>
+              <span class="pic-cat">{{ cat }}</span>
+            </div>
+            <span class="pic-arrow">›</span>
+          </div>
+          <div class="pic-body">
+            <p class="pic-tagline">"{{ tagline }}"</p>
+            <div class="pic-sections">
+              <div class="pic-sec">
+                <div class="pic-sec-title">🎯 Why Do It</div>
+                <p>{{ why }}</p>
+              </div>
+              <div class="pic-sec-row">
+                <div class="pic-sec half">
+                  <div class="pic-sec-title">💪 Physical Impact</div>
+                  <p>{{ physical }}</p>
+                </div>
+                <div class="pic-sec half">
+                  <div class="pic-sec-title">🧠 Mental Impact</div>
+                  <p>{{ mental }}</p>
+                </div>
+              </div>
+            </div>
+            <a href="/practice?pose={{ pose_id }}" class="pic-practice-btn" onclick="event.stopPropagation()">Practice This Pose →</a>
+          </div>
+        </div>
+        {% endfor %}
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+function showTab(tab, btn) {
+  document.querySelectorAll('.ins-tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ins-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleImpact(card) {
+  card.classList.toggle('open');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof loadSidebarUser === 'function') loadSidebarUser();
+});
+</script>
+{% endblock %}

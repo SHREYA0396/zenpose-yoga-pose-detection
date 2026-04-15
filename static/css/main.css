@@ -372,6 +372,8 @@ img { max-width: 100%; }
 }
 .nav-item:hover { background:var(--bg-2); color:var(--text); }
 .nav-item.active { background:rgba(34,197,94,0.12); color:var(--green-light); border:1px solid rgba(34,197,94,0.2); }
+.nav-item-soon { opacity:0.65; pointer-events:none; cursor:default; }
+.soon-tag { font-size:0.52rem; background:rgba(212,168,83,0.18); color:var(--gold); border:1px solid rgba(212,168,83,0.3); padding:1px 6px; border-radius:10px; margin-left:4px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; }
 .ni { font-size:1rem; }
 
 .sidebar-footer {

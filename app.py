@@ -47,6 +47,14 @@ app.secret_key = secrets.token_hex(32)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
+@app.before_request
+def redirect_to_localhost():
+    """Redirect 127.0.0.1 → localhost so the browser camera API works."""
+    host = request.host  # e.g. "127.0.0.1:5000"
+    if host.startswith('127.0.0.1'):
+        new_url = request.url.replace('http://127.0.0.1', 'http://localhost', 1)
+        return redirect(new_url, code=301)
+
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 DB_PATH = 'zenpose.db'
 
@@ -406,6 +414,21 @@ def practice():
     return render_template('practice.html',
         poses=POSE_LABELS, display_names=DISPLAY_NAMES, emojis=POSE_EMOJIS)
 
+@app.route('/meditation')
+def meditation_page():
+    if 'user_id' not in session: return redirect('/login')
+    return render_template('meditation.html')
+
+@app.route('/insights')
+def insights_page():
+    if 'user_id' not in session: return redirect('/login')
+    return render_template('insights.html')
+
+@app.route('/feedback')
+def feedback_page():
+    if 'user_id' not in session: return redirect('/login')
+    return render_template('feedback.html')
+
 # ─── AUTH API ─────────────────────────────────────────────────────────────────
 @app.route('/api/register', methods=['POST'])
 def api_register():
@@ -590,14 +613,18 @@ def api_poses():
 def api_detect():
     data        = request.json or {}
     frame_b64   = data.get('frame')
-    target_pose = data.get('target_pose')
+    target_pose = data.get('target_pose')   # Must be set; detection is locked to this pose
     hold_secs   = float(data.get('hold_seconds', 0))
+    count_rep   = bool(data.get('count_rep', False))  # Frontend sends True only after 15s hold
 
     uid = session['user_id']
+
+    HOLD_REQUIRED = 15.0   # seconds the user must hold before a rep counts
 
     try:
         pose_name, accuracy, is_correct = None, 0.0, False
         annotated_b64 = None
+        target_matched = False   # did ML agree this is the target pose?
 
         if frame_b64 and MP_AVAILABLE:
             img_bytes = base64.b64decode(frame_b64.split(',')[-1])
@@ -611,7 +638,28 @@ def api_detect():
                     pose_name  = LABEL_ENC.inverse_transform([pred_idx])[0]
                     confidence = float(np.max(pred_proba))
                     accuracy   = round(confidence * 100, 1)
-                    is_correct = (target_pose is None or pose_name == target_pose) and accuracy >= 70
+
+                    # If a target pose is selected, only report match when ML agrees
+                    if target_pose and target_pose in POSE_LABELS:
+                        # Get confidence specifically for the target pose
+                        try:
+                            target_idx     = LABEL_ENC.transform([target_pose])[0]
+                            target_conf    = float(pred_proba[target_idx])
+                            target_accuracy = round(target_conf * 100, 1)
+                        except Exception:
+                            target_accuracy = accuracy if pose_name == target_pose else 0.0
+
+                        # Override reported accuracy to reflect how well user matches target
+                        accuracy       = target_accuracy
+                        target_matched = target_accuracy >= 65
+                        pose_name      = target_pose   # Always report target pose name
+                    else:
+                        target_matched = accuracy >= 65
+
+                    # A rep is correct only when frontend confirms 15s hold
+                    is_correct = target_matched and count_rep
+
+                    # Draw skeleton landmarks on frame
                     annotated  = frame.copy()
                     mp_drawing.draw_landmarks(
                         annotated, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
@@ -622,50 +670,70 @@ def api_detect():
                     annotated_b64 = "data:image/jpeg;base64," + base64.b64encode(buf).decode()
 
         if pose_name is None:
-            pose_name, accuracy, is_correct = simulate_detection(target_pose)
+            # Simulation fallback — still locked to target pose
+            pose_name = target_pose if (target_pose and target_pose in POSE_LABELS) \
+                        else random.choice(POSE_LABELS)
+            accuracy        = round(random.uniform(68, 97), 1)
+            target_matched  = accuracy >= 65
+            is_correct      = target_matched and count_rep
 
-        # Streak update
+        # Only save to DB when a full rep is completed (count_rep=True) to avoid
+        # flooding the history table with every detection frame.
         db = get_db()
-        cur_streak, max_streak = _update_streak(db, uid, is_correct, pose_name)
+        cur_streak, max_streak = 0, 0
+        if count_rep and is_correct:
+            cur_streak, max_streak = _update_streak(db, uid, True, pose_name)
+            db.execute(
+                "INSERT INTO pose_history (user_id,pose_name,accuracy,is_correct,hold_seconds) VALUES (?,?,?,?,?)",
+                (uid, pose_name, accuracy, 1, hold_secs))
+            db.commit()
+        elif count_rep and not is_correct:
+            # Rep attempted but accuracy too low — record the failed attempt
+            _update_streak(db, uid, False, pose_name)
+            db.execute(
+                "INSERT INTO pose_history (user_id,pose_name,accuracy,is_correct,hold_seconds) VALUES (?,?,?,?,?)",
+                (uid, pose_name, accuracy, 0, hold_secs))
+            db.commit()
+        else:
+            # Live frame — just read current streak without writing
+            streak_row = db.execute("SELECT * FROM streaks WHERE user_id=?", (uid,)).fetchone()
+            if streak_row:
+                cur_streak  = streak_row['current_streak']
+                max_streak  = streak_row['max_streak']
 
-        # Save detection
-        db.execute(
-            "INSERT INTO pose_history (user_id,pose_name,accuracy,is_correct,hold_seconds) VALUES (?,?,?,?,?)",
-            (uid, pose_name, accuracy, int(is_correct), hold_secs))
-        db.commit()
-
-        # Build rich feedback
+        # Build feedback for the locked target pose
         fb = get_pose_feedback(pose_name)
 
-        # Conditional feedback messages
-        if accuracy >= 90:
-            alert_level    = 'perfect'
-            alert_message  = f"🎯 {fb['good_msg']}"
-        elif accuracy >= 75:
-            alert_level    = 'good'
-            alert_message  = f"👍 Good form! {fb['cues'][0] if fb['cues'] else 'Keep it up!'}"
-        elif accuracy >= 55:
-            alert_level    = 'warning'
-            correction     = fb['corrections'][0] if fb['corrections'] else 'Check your alignment'
-            alert_message  = f"⚠️ Almost there! {correction}"
+        # Feedback message — based on target pose accuracy
+        if not target_matched:
+            alert_level   = 'error'
+            correction    = fb['corrections'][0] if fb['corrections'] else 'Follow the pose cues'
+            alert_message = f"❌ Pose not recognised. {correction}"
+        elif accuracy >= 88:
+            alert_level   = 'perfect'
+            alert_message = f"🎯 {fb['good_msg']}"
+        elif accuracy >= 72:
+            alert_level   = 'good'
+            alert_message = f"👍 Good form! {fb['cues'][0] if fb['cues'] else 'Keep it up!'}"
         else:
-            alert_level    = 'error'
-            correction     = fb['corrections'][0] if fb['corrections'] else 'Follow the pose cues'
-            alert_message  = f"❌ Incorrect posture. {correction}"
+            alert_level   = 'warning'
+            correction    = fb['corrections'][0] if fb['corrections'] else 'Check your alignment'
+            alert_message = f"⚠️ Almost there! {correction}"
 
         return jsonify({
-            'pose':          pose_name,
-            'display_name':  DISPLAY_NAMES.get(pose_name, pose_name),
-            'emoji':         POSE_EMOJIS.get(pose_name, '🧘'),
-            'accuracy':      accuracy,
-            'confidence':    accuracy / 100,
-            'is_correct':    is_correct,
-            'feedback':      fb,
-            'alert_level':   alert_level,
-            'alert_message': alert_message,
+            'pose':           pose_name,
+            'display_name':   DISPLAY_NAMES.get(pose_name, pose_name),
+            'emoji':          POSE_EMOJIS.get(pose_name, '🧘'),
+            'accuracy':       accuracy,
+            'confidence':     accuracy / 100,
+            'is_correct':     is_correct,
+            'target_matched': target_matched,   # True = user is in correct pose right now
+            'feedback':       fb,
+            'alert_level':    alert_level,
+            'alert_message':  alert_message,
             'streak': {
-                'current': cur_streak,
-                'max':     max_streak,
+                'current':   cur_streak,
+                'max':       max_streak,
                 'milestone': cur_streak > 0 and cur_streak % 5 == 0,
             },
             'annotated_frame': annotated_b64,
@@ -675,26 +743,24 @@ def api_detect():
     except Exception as e:
         print(f"[Detect Error] {e}")
         import traceback; traceback.print_exc()
-        pose_name, accuracy, is_correct = simulate_detection(target_pose)
-        fb = get_pose_feedback(pose_name)
+        pose_name = target_pose or random.choice(POSE_LABELS)
+        accuracy  = round(random.uniform(50, 70), 1)
+        fb        = get_pose_feedback(pose_name)
         return jsonify({
-            'pose': pose_name, 'display_name': DISPLAY_NAMES.get(pose_name,''),
-            'emoji': POSE_EMOJIS.get(pose_name,'🧘'), 'accuracy': accuracy,
-            'confidence': accuracy/100, 'is_correct': is_correct,
-            'feedback': fb, 'alert_level': 'warning',
-            'alert_message': '⚠️ Detection error — check your pose',
-            'streak': {'current': 0, 'max': 0, 'milestone': False},
-            'annotated_frame': None, 'mp_available': False,
+            'pose':           pose_name,
+            'display_name':   DISPLAY_NAMES.get(pose_name,''),
+            'emoji':          POSE_EMOJIS.get(pose_name,'🧘'),
+            'accuracy':       accuracy,
+            'confidence':     accuracy / 100,
+            'is_correct':     False,
+            'target_matched': False,
+            'feedback':       fb,
+            'alert_level':    'warning',
+            'alert_message':  '⚠️ Detection error — check your pose',
+            'streak':         {'current': 0, 'max': 0, 'milestone': False},
+            'annotated_frame': None,
+            'mp_available':    False,
         })
 
 if __name__ == '__main__':
-    import smtplib
-
-    try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        
-    except Exception as e:
-        print("SMTP ERROR ❌:", e)
-
-    app.run(debug=True)
- 
+    app.run(debug=True, port=5000, host='0.0.0.0')

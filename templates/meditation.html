@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+{% block title %}Meditation – ZenPose{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/meditation.css"/>{% endblock %}
+{% block body %}
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <a href="/" class="sidebar-brand">
+      <span class="brand-icon">🧘</span><span class="brand-name">ZenPose</span>
+    </a>
+    <nav class="sidebar-nav">
+      <a href="/dashboard"  class="nav-item"><span class="ni">📊</span> Dashboard</a>
+      <a href="/practice"   class="nav-item"><span class="ni">🎯</span> Practice</a>
+      <a href="/meditation" class="nav-item active"><span class="ni">🎵</span> Meditation</a>
+      <a href="/insights"   class="nav-item"><span class="ni">🌿</span> Do You Know</a>
+      <a href="/feedback"   class="nav-item nav-item-soon"><span class="ni">💬</span> Feedback <span class="soon-tag">Soon</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <div class="user-info">
+          <div class="user-name"  id="sidebar-name">Loading…</div>
+          <div class="user-email" id="sidebar-email">…</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">⏻ Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-content med-main">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Meditation &amp; Mindfulness</h1>
+        <p class="page-sub">Sound therapy · Guided breathing · Inner peace</p>
+      </div>
+    </header>
+
+    <!-- ── AMBIENT SOUND THERAPY ─────────────────────────────────── -->
+    <section class="med-section">
+      <div class="med-sec-head">
+        <h2 class="med-sec-title">🎵 Ambient Sound Therapy</h2>
+        <p class="med-sec-sub">Brainwave frequencies generated in your browser — no downloads needed</p>
+      </div>
+
+      <div class="sound-grid">
+        <div class="sound-card" id="sc-alpha" onclick="toggleSound('alpha')">
+          <div class="sound-icon">🌊</div>
+          <div class="sound-name">Alpha Waves</div>
+          <div class="sound-freq">10 Hz · 200 Hz carrier</div>
+          <div class="sound-desc">Relaxation &amp; calm focus. Ideal for light meditation and stress relief.</div>
+          <button class="sound-play-btn" id="btn-alpha">▶ Play</button>
+        </div>
+        <div class="sound-card" id="sc-theta" onclick="toggleSound('theta')">
+          <div class="sound-icon">🌙</div>
+          <div class="sound-name">Theta Waves</div>
+          <div class="sound-freq">6 Hz · 200 Hz carrier</div>
+          <div class="sound-desc">Deep meditation &amp; creativity. The dreamlike state between awake and sleep.</div>
+          <button class="sound-play-btn" id="btn-theta">▶ Play</button>
+        </div>
+        <div class="sound-card" id="sc-delta" onclick="toggleSound('delta')">
+          <div class="sound-icon">💤</div>
+          <div class="sound-name">Delta Waves</div>
+          <div class="sound-freq">2 Hz · 200 Hz carrier</div>
+          <div class="sound-desc">Deep healing &amp; sleep. Regenerates body &amp; mind at the cellular level.</div>
+          <button class="sound-play-btn" id="btn-delta">▶ Play</button>
+        </div>
+        <div class="sound-card" id="sc-bowl" onclick="toggleSound('bowl')">
+          <div class="sound-icon">🔔</div>
+          <div class="sound-name">Singing Bowl</div>
+          <div class="sound-freq">432 Hz · Healing tone</div>
+          <div class="sound-desc">Sacred 432 Hz frequency. Said to resonate with the natural vibration of the universe.</div>
+          <button class="sound-play-btn" id="btn-bowl">▶ Play</button>
+        </div>
+        <div class="sound-card" id="sc-rain" onclick="toggleSound('rain')">
+          <div class="sound-icon">🌧️</div>
+          <div class="sound-name">Gentle Rain</div>
+          <div class="sound-freq">Brown noise · Low-pass</div>
+          <div class="sound-desc">Soothing rainfall simulation. Masks distractions and promotes deep focus.</div>
+          <button class="sound-play-btn" id="btn-rain">▶ Play</button>
+        </div>
+        <div class="sound-card" id="sc-om" onclick="toggleSound('om')">
+          <div class="sound-icon">🕉️</div>
+          <div class="sound-name">Om / Drone</div>
+          <div class="sound-freq">136.1 Hz · Earth tone</div>
+          <div class="sound-desc">The frequency of Om — resonates with Earth's rotation. Grounding and centering.</div>
+          <button class="sound-play-btn" id="btn-om">▶ Play</button>
+        </div>
+      </div>
+
+      <div class="sound-controls">
+        <div class="vol-row">
+          <span class="vol-icon">🔈</span>
+          <input type="range" id="volume-slider" class="vol-slider" min="0" max="1" step="0.02" value="0.25" oninput="setVolume(this.value)">
+          <span class="vol-icon">🔊</span>
+          <span class="vol-label" id="vol-label">25%</span>
+        </div>
+        <div class="sound-timer-wrap">
+          <span class="timer-label">Playing for</span>
+          <span class="sound-timer" id="sound-timer">0:00</span>
+        </div>
+        <button class="stop-all-btn" onclick="stopAllSounds()">⏹ Stop All</button>
+      </div>
+
+      <div class="binaural-note">
+        💡 <strong>Binaural beats</strong> require headphones to work — your left and right ears receive slightly different frequencies, and your brain perceives the difference as a rhythmic pulse.
+      </div>
+    </section>
+
+    <!-- ── GUIDED BREATHING ───────────────────────────────────────── -->
+    <section class="med-section">
+      <div class="med-sec-head">
+        <h2 class="med-sec-title">🫁 Guided Breathing</h2>
+        <p class="med-sec-sub">Choose a technique and follow the animated guide</p>
+      </div>
+
+      <div class="breath-techniques">
+        <button class="tech-btn active" onclick="selectBreathTech('478', this)">4-7-8 Technique</button>
+        <button class="tech-btn" onclick="selectBreathTech('box', this)">Box Breathing</button>
+        <button class="tech-btn" onclick="selectBreathTech('calm', this)">Calming Breath</button>
+      </div>
+
+      <div class="breath-area">
+        <div class="breath-circle-wrap">
+          <div class="breath-ring" id="breath-ring"></div>
+          <div class="breath-circle" id="breath-circle">
+            <span class="breath-emoji" id="breath-emoji">🌬️</span>
+          </div>
+          <div class="breath-instruction" id="breath-instruction">Press Start</div>
+        </div>
+
+        <div class="breath-info">
+          <div class="breath-step-cards" id="breath-step-cards">
+            <div class="bsc active" id="bsc-inhale"><span class="bsc-num" id="bsc-inhale-num">4</span><span class="bsc-label">Inhale</span></div>
+            <div class="bsc"        id="bsc-hold1"><span class="bsc-num" id="bsc-hold1-num">7</span><span class="bsc-label">Hold</span></div>
+            <div class="bsc"        id="bsc-exhale"><span class="bsc-num" id="bsc-exhale-num">8</span><span class="bsc-label">Exhale</span></div>
+            <div class="bsc hidden" id="bsc-hold2"><span class="bsc-num" id="bsc-hold2-num">4</span><span class="bsc-label">Hold</span></div>
+          </div>
+          <div class="breath-cycles">Cycles: <span id="cycle-count">0</span></div>
+          <div class="breath-benefit" id="breath-benefit">
+            The 4-7-8 technique, pioneered by Dr. Andrew Weil, activates the parasympathetic nervous system in under 60 seconds — reducing anxiety and lowering heart rate naturally.
+          </div>
+          <div class="breath-btn-row">
+            <button class="btn-primary" id="breath-start-btn" onclick="toggleBreathing()">▶ Start</button>
+            <button class="btn-outline" onclick="resetBreathing()">↺ Reset</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── MEDITATION TIPS ────────────────────────────────────────── -->
+    <section class="med-section">
+      <div class="med-sec-head">
+        <h2 class="med-sec-title">💡 Meditation Tips</h2>
+        <p class="med-sec-sub">Practical guidance for building a lasting practice</p>
+      </div>
+      <div class="tips-grid">
+        <div class="tip-card">
+          <div class="tip-icon">🌅</div>
+          <h3 class="tip-title">Best Time to Meditate</h3>
+          <p class="tip-text">Early morning (Brahma Muhurta, 4–6 AM) is considered ideal in yoga tradition — the mind is fresh, the world is quiet, and the energy is sattvic (pure). Even 10 minutes post-wake-up is powerful.</p>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🪑</div>
+          <h3 class="tip-title">Posture &amp; Seat</h3>
+          <p class="tip-text">Sit with your spine erect — this keeps you alert without tension. Use a cushion or folded blanket under your hips. Keep your chin slightly tucked. Crossed legs, kneeling, or a chair all work equally well.</p>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🧠</div>
+          <h3 class="tip-title">Mind Wandering is Normal</h3>
+          <p class="tip-text">Every time you notice your mind has wandered and gently bring it back — that IS the meditation. Beginners may redirect 100 times in 10 minutes. That's not failure; that's strength-training for attention.</p>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">⏱️</div>
+          <h3 class="tip-title">Start Small, Stay Consistent</h3>
+          <p class="tip-text">5 minutes every day beats 60 minutes once a week. Neuroscience shows that consistent short sessions build the meditative habit faster. Use your breathing session above as a natural entry point.</p>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">👁️</div>
+          <h3 class="tip-title">Eyes: Open or Closed?</h3>
+          <p class="tip-text">Closed eyes deepen inward awareness. Slightly open, downward-gazing eyes (Zen style) prevent drowsiness. Try both — most people find eyes closed works better for beginners.</p>
+        </div>
+        <div class="tip-card">
+          <div class="tip-icon">🌬️</div>
+          <h3 class="tip-title">Anchor to the Breath</h3>
+          <p class="tip-text">When starting out, simply observe the sensation of breath at your nostrils — the slight coolness on inhale, warmth on exhale. This physical anchor is more reliable than counting or mantras for most beginners.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── YOGA + MEDITATION SYNERGY ─────────────────────────────── -->
+    <section class="med-section">
+      <div class="med-sec-head">
+        <h2 class="med-sec-title">🧘 Yoga + Meditation Together</h2>
+        <p class="med-sec-sub">Why combining movement and stillness multiplies benefits</p>
+      </div>
+      <div class="synergy-grid">
+        <div class="synergy-card">
+          <span class="syn-icon">⚡</span>
+          <div>
+            <h4>Movement Prepares the Mind</h4>
+            <p>Physical yoga (asana) burns restless energy and releases muscle tension, making it far easier to sit still and focus during meditation immediately after.</p>
+          </div>
+        </div>
+        <div class="synergy-card">
+          <span class="syn-icon">🫀</span>
+          <div>
+            <h4>Deeper Parasympathetic Response</h4>
+            <p>Yoga activates the vagus nerve through breathing and posture. Meditation deepens this response. Together, cortisol drops 30–40% more than either practice alone.</p>
+          </div>
+        </div>
+        <div class="synergy-card">
+          <span class="syn-icon">🔁</span>
+          <div>
+            <h4>The Ideal Sequence</h4>
+            <p>Practice 20–40 min of asana → 5 min of Savasana (Corpse Pose) → 10–20 min of seated meditation. The body's stillness after yoga makes meditation effortless.</p>
+          </div>
+        </div>
+        <div class="synergy-card">
+          <span class="syn-icon">🌱</span>
+          <div>
+            <h4>Long-Term Brain Changes</h4>
+            <p>After 8 weeks of combined practice, MRI studies show measurable thickening of the insula and prefrontal cortex — regions governing self-awareness, empathy, and emotional regulation.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+// ── Web Audio API Meditation Engine ──────────────────────────────────────────
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let ctx = null;
+const activeSounds = {};
+let soundSeconds = 0, soundTimerInterval = null;
+let currentVolume = 0.25;
+
+function getCtx() {
+  if (!ctx) ctx = new AudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+
+function createBinaural(freqL, freqR, vol) {
+  const ac = getCtx();
+  const merger = ac.createChannelMerger(2);
+  const gainNode = ac.createGain();
+  gainNode.gain.value = vol;
+  merger.connect(gainNode);
+  gainNode.connect(ac.destination);
+
+  const oscL = ac.createOscillator();
+  const panL = ac.createStereoPanner();
+  panL.pan.value = -1;
+  oscL.frequency.value = freqL;
+  oscL.type = 'sine';
+  oscL.connect(panL); panL.connect(merger, 0, 0);
+
+  const oscR = ac.createOscillator();
+  const panR = ac.createStereoPanner();
+  panR.pan.value = 1;
+  oscR.frequency.value = freqR;
+  oscR.type = 'sine';
+  oscR.connect(panR); panR.connect(merger, 0, 1);
+
+  oscL.start(); oscR.start();
+  return { stop: () => { oscL.stop(); oscR.stop(); gainNode.disconnect(); }, gainNode };
+}
+
+function createTone(freq, type, vol) {
+  const ac = getCtx();
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  gain.gain.value = vol;
+  osc.type = type;
+  osc.frequency.value = freq;
+  osc.connect(gain); gain.connect(ac.destination);
+  osc.start();
+  return { stop: () => { osc.stop(); gain.disconnect(); }, gainNode: gain };
+}
+
+function createRain(vol) {
+  const ac = getCtx();
+  const bufSize = ac.sampleRate * 2;
+  const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = ac.createBufferSource();
+  src.buffer = buf; src.loop = true;
+  const filter = ac.createBiquadFilter();
+  filter.type = 'lowpass'; filter.frequency.value = 600;
+  const gain = ac.createGain(); gain.gain.value = vol;
+  src.connect(filter); filter.connect(gain); gain.connect(ac.destination);
+  src.start();
+  return { stop: () => { src.stop(); gain.disconnect(); }, gainNode: gain };
+}
+
+const SOUND_CONFIGS = {
+  alpha: () => createBinaural(200, 210, currentVolume),
+  theta: () => createBinaural(200, 206, currentVolume),
+  delta: () => createBinaural(200, 202, currentVolume),
+  bowl:  () => createTone(432, 'sine', currentVolume * 0.6),
+  rain:  () => createRain(currentVolume),
+  om:    () => createTone(136.1, 'sine', currentVolume * 0.7),
+};
+
+function toggleSound(type) {
+  if (activeSounds[type]) {
+    activeSounds[type].stop();
+    delete activeSounds[type];
+    document.getElementById('sc-'+type).classList.remove('playing');
+    document.getElementById('btn-'+type).textContent = '▶ Play';
+    if (Object.keys(activeSounds).length === 0) stopSoundTimer();
+  } else {
+    activeSounds[type] = SOUND_CONFIGS[type]();
+    document.getElementById('sc-'+type).classList.add('playing');
+    document.getElementById('btn-'+type).textContent = '⏹ Stop';
+    if (!soundTimerInterval) startSoundTimer();
+  }
+}
+
+function setVolume(v) {
+  currentVolume = parseFloat(v);
+  document.getElementById('vol-label').textContent = Math.round(v * 100) + '%';
+  Object.values(activeSounds).forEach(s => { if (s.gainNode) s.gainNode.gain.value = currentVolume; });
+}
+
+function stopAllSounds() {
+  Object.keys(activeSounds).forEach(t => {
+    activeSounds[t].stop();
+    document.getElementById('sc-'+t)?.classList.remove('playing');
+    document.getElementById('btn-'+t).textContent = '▶ Play';
+  });
+  Object.keys(activeSounds).forEach(k => delete activeSounds[k]);
+  stopSoundTimer();
+}
+
+function startSoundTimer() {
+  soundSeconds = 0;
+  soundTimerInterval = setInterval(() => {
+    soundSeconds++;
+    const m = Math.floor(soundSeconds/60), s = soundSeconds%60;
+    const el = document.getElementById('sound-timer');
+    if (el) el.textContent = m+':'+(s<10?'0':'')+s;
+  }, 1000);
+}
+function stopSoundTimer() {
+  clearInterval(soundTimerInterval); soundTimerInterval = null;
+  const el = document.getElementById('sound-timer');
+  if (el) el.textContent = '0:00';
+}
+
+// ── Breathing Guide ───────────────────────────────────────────────────────────
+const BREATH_TECHS = {
+  '478': { inhale:4, hold1:7, exhale:8, hold2:0,
+    benefit:'The 4-7-8 technique, developed by Dr. Andrew Weil, acts as a natural tranquiliser. Exhaling for twice the inhale forces full CO₂ release, activating the parasympathetic nervous system and reducing anxiety within 4 cycles.' },
+  'box':  { inhale:4, hold1:4, exhale:4, hold2:4,
+    benefit:'Box Breathing is used by Navy SEALs and elite athletes to regain calm under pressure. Equal phase lengths synchronise heart rate variability (HRV) and build resilience to stress over time.' },
+  'calm': { inhale:4, hold1:0, exhale:6, hold2:0,
+    benefit:'Simple Calming Breath emphasises a longer exhale, the fastest route to activating the vagus nerve. Ideal for beginners or moments of acute stress — the effect is felt within 3 breaths.' },
+};
+
+let breathTech = BREATH_TECHS['478'];
+let breathRunning = false, breathPhase = 'idle', breathTimeout = null, cycleCount = 0;
+
+function selectBreathTech(key, btn) {
+  if (breathRunning) return;
+  breathTech = BREATH_TECHS[key];
+  document.querySelectorAll('.tech-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('bsc-inhale-num').textContent = breathTech.inhale;
+  document.getElementById('bsc-hold1-num').textContent  = breathTech.hold1;
+  document.getElementById('bsc-exhale-num').textContent = breathTech.exhale;
+  document.getElementById('bsc-hold2-num').textContent  = breathTech.hold2;
+  const h2 = document.getElementById('bsc-hold2');
+  if (h2) h2.classList.toggle('hidden', breathTech.hold2 === 0);
+  document.getElementById('breath-benefit').textContent = breathTech.benefit;
+  resetBreathing();
+}
+
+function toggleBreathing() {
+  breathRunning ? stopBreathing() : startBreathing();
+}
+
+function startBreathing() {
+  breathRunning = true;
+  document.getElementById('breath-start-btn').textContent = '⏸ Pause';
+  runPhase('inhale');
+}
+
+function stopBreathing() {
+  breathRunning = false;
+  clearTimeout(breathTimeout);
+  document.getElementById('breath-start-btn').textContent = '▶ Start';
+  document.getElementById('breath-instruction').textContent = 'Paused';
+  setCircleScale(1);
+}
+
+function resetBreathing() {
+  stopBreathing();
+  cycleCount = 0;
+  document.getElementById('cycle-count').textContent = '0';
+  document.getElementById('breath-instruction').textContent = 'Press Start';
+  document.getElementById('breath-emoji').textContent = '🌬️';
+  setCircleScale(1);
+  document.querySelectorAll('.bsc').forEach(c => c.classList.remove('active'));
+  document.getElementById('bsc-inhale')?.classList.add('active');
+}
+
+function runPhase(phase) {
+  if (!breathRunning) return;
+  const phases = ['inhale', 'hold1', 'exhale'].concat(breathTech.hold2 > 0 ? ['hold2'] : []);
+  const durations = {
+    inhale: breathTech.inhale, hold1: breathTech.hold1,
+    exhale: breathTech.exhale, hold2: breathTech.hold2
+  };
+  const labels = { inhale:'Inhale…', hold1:'Hold…', exhale:'Exhale…', hold2:'Hold…' };
+  const emojis = { inhale:'🌬️', hold1:'✋', exhale:'😮‍💨', hold2:'✋' };
+
+  if (phase === 'inhale') { cycleCount++; document.getElementById('cycle-count').textContent = cycleCount; }
+
+  document.getElementById('breath-instruction').textContent = labels[phase];
+  document.getElementById('breath-emoji').textContent = emojis[phase];
+  document.querySelectorAll('.bsc').forEach(c => c.classList.remove('active'));
+  document.getElementById('bsc-'+phase)?.classList.add('active');
+
+  const dur = durations[phase];
+  if (phase === 'inhale') animateCircle(1, 1.6, dur * 1000);
+  else if (phase === 'exhale') animateCircle(1.6, 1, dur * 1000);
+  else animateCircle(phase==='hold1' ? 1.6 : 1, phase==='hold1' ? 1.6 : 1, dur * 1000);
+
+  if (dur === 0) {
+    const idx = phases.indexOf(phase);
+    const next = phases[(idx + 1) % phases.length];
+    runPhase(next);
+    return;
+  }
+
+  breathTimeout = setTimeout(() => {
+    if (!breathRunning) return;
+    const idx = phases.indexOf(phase);
+    const next = phases[(idx + 1) % phases.length];
+    runPhase(next);
+  }, dur * 1000);
+}
+
+function animateCircle(fromScale, toScale, durationMs) {
+  const circle = document.getElementById('breath-circle');
+  const ring   = document.getElementById('breath-ring');
+  if (!circle) return;
+  circle.style.transition = `transform ${durationMs}ms ease-in-out`;
+  circle.style.transform  = `scale(${toScale})`;
+  if (ring) {
+    ring.style.transition = `transform ${durationMs}ms ease-in-out, opacity ${durationMs}ms ease-in-out`;
+    ring.style.transform  = `scale(${toScale * 1.15})`;
+    ring.style.opacity    = toScale > 1 ? '0.6' : '0.15';
+  }
+}
+function setCircleScale(s) {
+  const el = document.getElementById('breath-circle');
+  if (el) { el.style.transition = 'none'; el.style.transform = `scale(${s})`; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof loadSidebarUser === 'function') loadSidebarUser();
+});
+</script>
+{% endblock %}
