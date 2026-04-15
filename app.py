@@ -688,4 +688,13 @@ def api_detect():
         })
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    import smtplib
+
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        
+    except Exception as e:
+        print("SMTP ERROR ❌:", e)
+
+    app.run(debug=True)
+ 
