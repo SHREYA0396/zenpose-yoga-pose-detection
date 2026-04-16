@@ -57,34 +57,36 @@ app.secret_key = secrets.token_hex(32)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# ─── POSE IMAGE CACHE (in-memory, server-side Wikipedia proxy) ─────────────────
-_POSE_IMG_CACHE = {}  # pose_key → url str or None
-_WIKI_POSE_TITLES = {
-    'tadasana':       'Tadasana',
-    'vrikshasana':    'Vrikshasana',
-    'warrior_i':      'Virabhadrasana_I',
-    'warrior_ii':     'Virabhadrasana_II',
-    'warrior_iii':    'Virabhadrasana_III',
-    'goddess':        'Utkata_Konasana',
-    'downward_dog':   'Downward_Dog_Pose',
-    'cobra':          'Cobra_Pose',
-    'plank':          'Plank_(exercise)',
-    'triangle':       'Trikonasana',
-    'child_pose':     "Child's_pose",
-    'chair_pose':     'Utkatasana',
-    'bridge':         'Setu_Bandha_Sarvangasana',
-    'pigeon':         'Pigeon_pose',
-    'camel':          'Ustrasana',
-    'half_moon':      'Ardha_Chandrasana',
-    'boat':           'Navasana',
-    'crow':           'Bakasana',
-    'eagle':          'Garudasana',
-    'lotus':          'Lotus_position',
-    'fish':           'Matsyasana',
-    'seated_forward': 'Paschimottanasana',
-    'supine_twist':   'Supta_Matsyendrasana',
-    'low_lunge':      'Anjaneyasana',
-    'side_plank':     'Vasisthasana',
+# ─── POSE IMAGE CACHE (pocketyoga.com scraper + SVG fallback) ─────────────────
+_POSE_IMG_CACHE = {}  # pose_key → {'bytes': b'...', 'ct': '...'} or None
+
+# pocketyoga.com pose URL names  (https://pocketyoga.com/pose/{name})
+_POCKETYOGA_NAMES = {
+    'tadasana':       'Mountain',
+    'vrikshasana':    'Tree',
+    'warrior_i':      'WarriorI',
+    'warrior_ii':     'WarriorII',
+    'warrior_iii':    'WarriorIII',
+    'goddess':        'Goddess',
+    'downward_dog':   'DownwardFacingDog',
+    'cobra':          'CobraLow',
+    'plank':          'PlankHigh',
+    'triangle':       'Triangle',
+    'child_pose':     'ChildsFull',
+    'chair_pose':     'Chair',
+    'bridge':         'Bridge',
+    'pigeon':         'Pigeon',
+    'camel':          'CamelFull',
+    'half_moon':      'HalfMoon',
+    'boat':           'Boat',
+    'crow':           'CrowCrane',
+    'eagle':          'Eagle',
+    'lotus':          'LotusFlower',
+    'fish':           'FishLegs',
+    'seated_forward': 'SeatedForwardBend',
+    'supine_twist':   'SupineTwistKneeDown',
+    'low_lunge':      'LowLunge',
+    'side_plank':     'SidePlank',
 }
 
 @app.before_request
@@ -118,6 +120,11 @@ def init_db():
             email         TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             is_verified   INTEGER DEFAULT 0,
+            age           INTEGER DEFAULT NULL,
+            gender        TEXT    DEFAULT NULL,
+            phone         TEXT    DEFAULT NULL,
+            fitness_level TEXT    DEFAULT NULL,
+            address       TEXT    DEFAULT NULL,
             created_at    TEXT DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS otp_store (
@@ -158,6 +165,11 @@ def init_db():
     for col_sql in [
         "ALTER TABLE pose_history ADD COLUMN is_correct INTEGER DEFAULT 0",
         "ALTER TABLE pose_history ADD COLUMN hold_seconds REAL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN age           INTEGER DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN gender        TEXT    DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN phone         TEXT    DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN fitness_level TEXT    DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN address       TEXT    DEFAULT NULL",
     ]:
         try: db.execute(col_sql)
         except: pass
@@ -476,25 +488,42 @@ def api_register():
     name  = (d.get('name') or '').strip()
     email = (d.get('email') or '').strip().lower()
     pw    = d.get('password') or ''
+    age   = d.get('age')
+    gender        = (d.get('gender') or '').strip()
+    phone         = (d.get('phone') or '').strip()
+    fitness_level = (d.get('fitness_level') or '').strip()
+    address       = (d.get('address') or '').strip()
+
     if not all([name, email, pw]):
-        return jsonify({'error': 'All fields are required'}), 400
+        return jsonify({'error': 'Name, email and password are required'}), 400
     if len(pw) < 6:
         return jsonify({'error': 'Password must be at least 6 characters'}), 400
     if '@' not in email or '.' not in email.split('@')[-1]:
         return jsonify({'error': 'Please enter a valid email address'}), 400
+    if not age or not (13 <= int(age) <= 100):
+        return jsonify({'error': 'Please enter a valid age (13–100)'}), 400
+    if not gender:
+        return jsonify({'error': 'Please select your gender'}), 400
+    if not fitness_level:
+        return jsonify({'error': 'Please select your fitness level'}), 400
+
     db = get_db()
     if db.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone():
         return jsonify({'error': 'This email is already registered. Please login.'}), 409
     otp = generate_otp()
     store_otp(email, otp, 'register')
     result = send_otp_email(email, otp, "account registration")
-    session['pending_register'] = {'name': name, 'email': email, 'pw_hash': hash_password(pw)}
+    session['pending_register'] = {
+        'name': name, 'email': email, 'pw_hash': hash_password(pw),
+        'age': int(age), 'gender': gender, 'phone': phone,
+        'fitness_level': fitness_level, 'address': address,
+    }
     resp = {'success': True, 'email_method': result['method']}
     if result['method'] == 'smtp':
         resp['message'] = 'OTP sent to your email'
     else:
         resp['message'] = 'Email not configured — OTP shown below'
-        resp['dev_otp'] = otp   # Show in browser when SMTP is not set up
+        resp['dev_otp'] = otp
     return jsonify(resp)
 
 @app.route('/api/verify-register-otp', methods=['POST'])
@@ -509,8 +538,13 @@ def api_verify_register():
         return jsonify({'error': msg}), 400
     db = get_db()
     try:
-        db.execute("INSERT INTO users (name,email,password_hash,is_verified) VALUES (?,?,?,1)",
-                   (pending['name'], pending['email'], pending['pw_hash']))
+        db.execute(
+            "INSERT INTO users (name,email,password_hash,is_verified,age,gender,phone,fitness_level,address) "
+            "VALUES (?,?,?,1,?,?,?,?,?)",
+            (pending['name'], pending['email'], pending['pw_hash'],
+             pending.get('age'), pending.get('gender'), pending.get('phone'),
+             pending.get('fitness_level'), pending.get('address'))
+        )
         db.commit()
         user = db.execute("SELECT id FROM users WHERE email=?", (pending['email'],)).fetchone()
         session.pop('pending_register', None)
@@ -659,37 +693,105 @@ def api_poses():
         },
     })
 
-# ─── POSE IMAGE PROXY (server-side Wikipedia fetch — avoids browser CORS) ─────
+# ─── POSE IMAGE PROXY (serves image bytes or SVG fallback — never hangs) ───────
+def _pose_svg_fallback(pose):
+    """Return a styled SVG placeholder for poses when Wikipedia is unreachable."""
+    from flask import Response
+    display = pose.replace('_', ' ').title()
+    # Escape XML entities
+    display = display.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="280" viewBox="0 0 320 280">'
+        '<rect width="320" height="280" rx="14" fill="#0d1f1a"/>'
+        '<circle cx="160" cy="80" r="26" fill="none" stroke="#22c55e" stroke-width="1.5" opacity="0.45"/>'
+        '<line x1="160" y1="106" x2="160" y2="168" stroke="#22c55e" stroke-width="1.5" opacity="0.45"/>'
+        '<line x1="160" y1="128" x2="122" y2="113" stroke="#22c55e" stroke-width="1.5" opacity="0.45"/>'
+        '<line x1="160" y1="128" x2="198" y2="113" stroke="#22c55e" stroke-width="1.5" opacity="0.45"/>'
+        '<line x1="160" y1="168" x2="136" y2="200" stroke="#22c55e" stroke-width="1.5" opacity="0.45"/>'
+        '<line x1="160" y1="168" x2="184" y2="200" stroke="#22c55e" stroke-width="1.5" opacity="0.45"/>'
+        f'<text x="160" y="232" font-size="15" text-anchor="middle" fill="#9ba8a0"'
+        f' font-family="system-ui,sans-serif" font-weight="600">{display}</text>'
+        '<text x="160" y="256" font-size="11" text-anchor="middle" fill="#4a6060"'
+        ' font-family="system-ui,sans-serif">No photo available</text>'
+        '</svg>'
+    )
+    return Response(svg.encode('utf-8'), content_type='image/svg+xml',
+                    headers={'Cache-Control': 'no-cache'})
+
+def _scrape_pocketyoga_image_url(pocket_name):
+    """
+    Fetch https://pocketyoga.com/pose/{pocket_name} and return the og:image URL.
+    Returns None on any failure.
+    """
+    import re
+    page_url = f'https://pocketyoga.com/pose/{_urllib_parse.quote(pocket_name)}'
+    req = _urllib_req.Request(page_url, headers={
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                      'AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+    })
+    try:
+        with _urllib_req.urlopen(req, timeout=5) as resp:
+            html = resp.read().decode('utf-8', errors='replace')
+    except Exception as e:
+        print(f'[PocketYoga page] {pocket_name}: {e}')
+        return None
+
+    # og:image comes in two attribute orders; try both
+    for pattern in [
+        r'<meta\s[^>]*property=["\']og:image["\']\s[^>]*content=["\'](https?://[^"\']+)["\']',
+        r'<meta\s[^>]*content=["\'](https?://[^"\']+)["\'][^>]*property=["\']og:image["\']',
+    ]:
+        m = re.search(pattern, html, re.I)
+        if m:
+            return m.group(1)
+    return None
+
+
 @app.route('/api/pose-image/<pose>')
 def api_pose_image(pose):
-    """Fetch Wikipedia thumbnail for a pose server-side and cache it in memory."""
+    """Proxy pocketyoga.com pose image as bytes; always returns SVG fallback on failure."""
+    from flask import Response
+
+    # Serve cached bytes immediately (real image or None = failed)
     if pose in _POSE_IMG_CACHE:
-        return jsonify({'url': _POSE_IMG_CACHE[pose]})
+        cached = _POSE_IMG_CACHE[pose]
+        if cached is None:
+            return _pose_svg_fallback(pose)
+        return Response(cached['bytes'], content_type=cached['ct'],
+                        headers={'Cache-Control': 'public, max-age=86400'})
 
-    title = _WIKI_POSE_TITLES.get(pose)
-    if not title:
+    pocket_name = _POCKETYOGA_NAMES.get(pose)
+    if not pocket_name:
         _POSE_IMG_CACHE[pose] = None
-        return jsonify({'url': None})
+        return _pose_svg_fallback(pose)
 
+    # Step 1 — scrape og:image from pocketyoga pose page
+    img_url = _scrape_pocketyoga_image_url(pocket_name)
+    if not img_url:
+        _POSE_IMG_CACHE[pose] = None
+        return _pose_svg_fallback(pose)
+
+    # Step 2 — fetch the actual image bytes
     try:
-        encoded = _urllib_parse.quote(title, safe='_()')
-        req = _urllib_req.Request(
-            f'https://en.wikipedia.org/api/rest_v1/page/summary/{encoded}',
-            headers={
-                'User-Agent': 'ZenPose/1.0 (yoga pose detection; educational)',
-                'Accept': 'application/json',
-            }
-        )
-        with _urllib_req.urlopen(req, timeout=6) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-        url = (data.get('thumbnail') or {}).get('source') or \
-              (data.get('originalimage') or {}).get('source')
-        _POSE_IMG_CACHE[pose] = url
-        return jsonify({'url': url})
+        img_req = _urllib_req.Request(img_url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://pocketyoga.com/',
+            'Accept': 'image/*,*/*',
+        })
+        with _urllib_req.urlopen(img_req, timeout=6) as img_resp:
+            img_bytes = img_resp.read()
+            content_type = img_resp.headers.get('Content-Type', 'image/jpeg').split(';')[0]
+        _POSE_IMG_CACHE[pose] = {'bytes': img_bytes, 'ct': content_type}
+        return Response(img_bytes, content_type=content_type,
+                        headers={'Cache-Control': 'public, max-age=86400'})
     except Exception as e:
-        print(f'[PoseImage] {pose}: {e}')
+        print(f'[PoseImage bytes] {pose}: {e}')
         _POSE_IMG_CACHE[pose] = None
-        return jsonify({'url': None})
+        return _pose_svg_fallback(pose)
 
 # ─── DETECT API ───────────────────────────────────────────────────────────────
 @app.route('/api/detect', methods=['POST'])
@@ -847,4 +949,4 @@ def api_detect():
         })
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    app.run(debug=True, port=5000, host='0.0.0.0', threaded=True)

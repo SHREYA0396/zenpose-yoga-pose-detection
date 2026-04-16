@@ -84,16 +84,24 @@ function startResendTimer(btnId, timerId, seconds = 60) {
 // ─── REGISTER ─────────────────────────────────────────────────────────────────
 async function handleRegister() {
   hideError('reg-error');
-  const name  = document.getElementById('reg-name').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const pw    = document.getElementById('reg-password').value;
+  const name    = document.getElementById('reg-name').value.trim();
+  const email   = document.getElementById('reg-email').value.trim();
+  const pw      = document.getElementById('reg-password').value;
+  const age     = document.getElementById('reg-age')?.value.trim();
+  const gender  = document.getElementById('reg-gender')?.value;
+  const phone   = document.getElementById('reg-phone')?.value.trim();
+  const fitness = document.getElementById('reg-fitness')?.value;
+  const address = document.getElementById('reg-address')?.value.trim();
 
-  if (!name || !email || !pw) { showError('reg-error','All fields are required'); return; }
+  if (!name || !email || !pw) { showError('reg-error','Name, email and password are required'); return; }
   if (pw.length < 6) { showError('reg-error','Password must be at least 6 characters'); return; }
+  if (!age || isNaN(age) || age < 13 || age > 100) { showError('reg-error','Please enter a valid age (13–100)'); return; }
+  if (!gender) { showError('reg-error','Please select your gender'); return; }
+  if (!fitness) { showError('reg-error','Please select your fitness level'); return; }
 
   setLoading('reg-btn-text','reg-spinner', true);
   try {
-    const d = await api('/api/register', { name, email, password: pw });
+    const d = await api('/api/register', { name, email, password: pw, age: parseInt(age), gender, phone, fitness_level: fitness, address });
     if (d.error) { showError('reg-error', d.error); return; }
     const sub = document.getElementById('otp-reg-subtitle');
     if (d.dev_otp) {

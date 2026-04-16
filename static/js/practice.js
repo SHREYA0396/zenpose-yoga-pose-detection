@@ -431,36 +431,55 @@ function toggleVoice() {
   else window.speechSynthesis?.cancel();
 }
 
-// ─── POSE REFERENCE IMAGE (server-side proxy → Wikipedia) ────────────────────
-async function loadPoseReferenceImage(pose) {
+// ─── POSE REFERENCE IMAGE ─────────────────────────────────────────────────────
+// Shows an instant local guide card from already-loaded pose data (no spinner,
+// no network wait). Silently fetches a Wikipedia photo in the background; if it
+// loads, it replaces the guide card. If it fails, the guide card stays.
+function loadPoseReferenceImage(pose) {
   const loading     = $('ref-img-loading');
   const img         = $('pose-ref-img');
   const placeholder = $('ref-img-placeholder');
   const badge       = $('prc-badge');
 
   if (!img) return;
-  img.classList.add('hidden');
-  if (placeholder) placeholder.classList.add('hidden');
-  if (loading) { loading.classList.remove('hidden'); loading.innerHTML = '<div class="ref-spinner"></div><span>Loading photo…</span>'; }
 
-  try {
-    // Use server-side route to avoid CORS and add proper Wikipedia User-Agent
-    const r = await fetch(`/api/pose-image/${pose}`);
-    const d = await r.json();
-    if (d.url) {
-      img.src = d.url;
-      img.onload = () => {
-        if (loading) loading.classList.add('hidden');
-        img.classList.remove('hidden');
-        if (badge) badge.textContent = 'Wikipedia';
-      };
-      img.onerror = () => showPlaceholder(pose);
-    } else {
-      showPlaceholder(pose);
-    }
-  } catch(e) {
-    showPlaceholder(pose);
+  // Hide loading spinner and the raw img element
+  img.classList.add('hidden');
+  if (loading) loading.classList.add('hidden');
+
+  // ── Show instant reference card ───────────────────────────────────────────
+  if (placeholder) {
+    const pd   = state.allPoseData[pose] || {};
+    const emoji = pd.emoji  || '🧘';
+    const name  = pd.display_name || pose.replace(/_/g, ' ');
+    const cue   = (pd.cues && pd.cues[0]) || pd.description || '';
+    const diff  = pd.difficulty || '';
+    const diffColor = { Beginner:'#22c55e', Intermediate:'#f59e0b', Advanced:'#ef4444' }[diff] || '#9ba8a0';
+    placeholder.innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;'
+      + 'padding:16px;width:100%;text-align:center;">'
+      + `<span style="font-size:3rem;line-height:1;">${emoji}</span>`
+      + `<span style="font-size:0.85rem;font-weight:700;color:#c8d8d0;">${name}</span>`
+      + (diff
+          ? `<span style="font-size:0.65rem;padding:2px 10px;border-radius:20px;`
+            + `background:${diffColor}22;color:${diffColor};border:1px solid ${diffColor}44;">${diff}</span>`
+          : '')
+      + (cue
+          ? `<span style="font-size:0.72rem;color:#9ba8a0;line-height:1.5;max-width:170px;">${cue}</span>`
+          : '')
+      + '</div>';
+    placeholder.classList.remove('hidden');
+    if (badge) badge.textContent = 'Guide';
   }
+
+  // ── Silently try Wikipedia photo in background ────────────────────────────
+  img.onload = () => {
+    if (placeholder) placeholder.classList.add('hidden');
+    img.classList.remove('hidden');
+    if (badge) badge.textContent = 'Photo';
+  };
+  img.onerror = () => { /* keep guide card — it's already visible */ };
+  img.src = `/api/pose-image/${encodeURIComponent(pose)}`;
 }
 
 function showPlaceholder(pose) {

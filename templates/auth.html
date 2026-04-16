@@ -65,6 +65,52 @@
               <button type="button" class="pw-toggle" onclick="togglePw('reg-password', this)">👁</button>
             </div>
           </div>
+          <div class="form-row" style="display:flex;gap:12px;">
+            <div class="form-group" style="flex:1">
+              <label>Age</label>
+              <div class="input-wrap">
+                <span class="input-icon">🎂</span>
+                <input type="number" id="reg-age" placeholder="Your age" min="13" max="100" required/>
+              </div>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label>Gender</label>
+              <div class="input-wrap">
+                <select id="reg-gender" class="auth-select" required>
+                  <option value="">-- Select --</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Non-binary">Non-binary</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Phone <span style="font-weight:400;opacity:0.6;">(optional)</span></label>
+            <div class="input-wrap">
+              <span class="input-icon">📞</span>
+              <input type="tel" id="reg-phone" placeholder="Phone number (optional)"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Fitness Level</label>
+            <div class="input-wrap">
+              <select id="reg-fitness" class="auth-select" required>
+                <option value="">-- Select Level --</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Address <span style="font-weight:400;opacity:0.6;">(optional)</span></label>
+            <div class="input-wrap">
+              <span class="input-icon">📍</span>
+              <input type="text" id="reg-address" placeholder="City / Address (optional)"/>
+            </div>
+          </div>
           <div id="reg-error" class="auth-error hidden"></div>
           <button type="submit" class="btn-primary btn-full" onclick="handleRegister()">
             <span id="reg-btn-text">Create Account & Send OTP</span>
