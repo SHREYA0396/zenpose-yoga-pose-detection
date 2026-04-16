@@ -1,4 +1,4 @@
-# 🧘 ZenPose v2.0 — AI Yoga Pose Detection
+# 🧘 ZenPose  — AI Yoga Pose Detection
 
 > 25 poses · Streak tracking · Session timer · Chart.js analytics · Email OTP · Voice feedback
 
