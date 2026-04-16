@@ -5,6 +5,8 @@ Features: 25 poses, streak tracking, session timer, performance analytics,
 """
 
 import os, pickle, random, time, base64, smtplib, json, sqlite3, hashlib, secrets
+import urllib.request as _urllib_req
+import urllib.parse  as _urllib_parse
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -14,6 +16,14 @@ import numpy as np
 import cv2
 from flask import (Flask, render_template, request, jsonify,
                    session, redirect, g)
+
+# Auto-load .env file so EMAIL_USER / EMAIL_PASS are available without
+# manually setting env vars every time.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # ─── MEDIAPIPE ────────────────────────────────────────────────────────────────
 try:
@@ -46,6 +56,36 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# ─── POSE IMAGE CACHE (in-memory, server-side Wikipedia proxy) ─────────────────
+_POSE_IMG_CACHE = {}  # pose_key → url str or None
+_WIKI_POSE_TITLES = {
+    'tadasana':       'Tadasana',
+    'vrikshasana':    'Vrikshasana',
+    'warrior_i':      'Virabhadrasana_I',
+    'warrior_ii':     'Virabhadrasana_II',
+    'warrior_iii':    'Virabhadrasana_III',
+    'goddess':        'Utkata_Konasana',
+    'downward_dog':   'Downward_Dog_Pose',
+    'cobra':          'Cobra_Pose',
+    'plank':          'Plank_(exercise)',
+    'triangle':       'Trikonasana',
+    'child_pose':     "Child's_pose",
+    'chair_pose':     'Utkatasana',
+    'bridge':         'Setu_Bandha_Sarvangasana',
+    'pigeon':         'Pigeon_pose',
+    'camel':          'Ustrasana',
+    'half_moon':      'Ardha_Chandrasana',
+    'boat':           'Navasana',
+    'crow':           'Bakasana',
+    'eagle':          'Garudasana',
+    'lotus':          'Lotus_position',
+    'fish':           'Matsyasana',
+    'seated_forward': 'Paschimottanasana',
+    'supine_twist':   'Supta_Matsyendrasana',
+    'low_lunge':      'Anjaneyasana',
+    'side_plank':     'Vasisthasana',
+}
 
 @app.before_request
 def redirect_to_localhost():
@@ -449,9 +489,13 @@ def api_register():
     store_otp(email, otp, 'register')
     result = send_otp_email(email, otp, "account registration")
     session['pending_register'] = {'name': name, 'email': email, 'pw_hash': hash_password(pw)}
-    msg = 'OTP sent to your email' if result['method'] == 'smtp' \
-          else 'OTP printed to server console (configure EMAIL_USER/EMAIL_PASS for real email)'
-    return jsonify({'success': True, 'message': msg, 'email_method': result['method']})
+    resp = {'success': True, 'email_method': result['method']}
+    if result['method'] == 'smtp':
+        resp['message'] = 'OTP sent to your email'
+    else:
+        resp['message'] = 'Email not configured — OTP shown below'
+        resp['dev_otp'] = otp   # Show in browser when SMTP is not set up
+    return jsonify(resp)
 
 @app.route('/api/verify-register-otp', methods=['POST'])
 def api_verify_register():
@@ -496,9 +540,13 @@ def api_login():
     store_otp(email, otp, 'login')
     result = send_otp_email(email, otp, "login verification")
     session['pending_login'] = {'user_id': user['id'], 'email': email, 'name': user['name']}
-    msg = 'OTP sent to your email' if result['method'] == 'smtp' \
-          else 'OTP printed to server console (configure EMAIL_USER/EMAIL_PASS for real email)'
-    return jsonify({'success': True, 'message': msg, 'email_method': result['method']})
+    resp = {'success': True, 'email_method': result['method']}
+    if result['method'] == 'smtp':
+        resp['message'] = 'OTP sent to your email'
+    else:
+        resp['message'] = 'Email not configured — OTP shown below'
+        resp['dev_otp'] = otp   # Show in browser when SMTP is not set up
+    return jsonify(resp)
 
 @app.route('/api/verify-login-otp', methods=['POST'])
 def api_verify_login():
@@ -526,9 +574,13 @@ def api_resend_otp():
     otp    = generate_otp()
     store_otp(pending['email'], otp, purpose)
     result = send_otp_email(pending['email'], otp, purpose)
-    msg = 'New OTP sent to your email' if result['method'] == 'smtp' \
-          else 'New OTP printed to server console'
-    return jsonify({'success': True, 'message': msg})
+    resp = {'success': True}
+    if result['method'] == 'smtp':
+        resp['message'] = 'New OTP sent to your email'
+    else:
+        resp['message'] = 'New OTP generated — shown below'
+        resp['dev_otp'] = otp
+    return jsonify(resp)
 
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
@@ -606,6 +658,38 @@ def api_poses():
             for k, v in POSE_FEEDBACK.items()
         },
     })
+
+# ─── POSE IMAGE PROXY (server-side Wikipedia fetch — avoids browser CORS) ─────
+@app.route('/api/pose-image/<pose>')
+def api_pose_image(pose):
+    """Fetch Wikipedia thumbnail for a pose server-side and cache it in memory."""
+    if pose in _POSE_IMG_CACHE:
+        return jsonify({'url': _POSE_IMG_CACHE[pose]})
+
+    title = _WIKI_POSE_TITLES.get(pose)
+    if not title:
+        _POSE_IMG_CACHE[pose] = None
+        return jsonify({'url': None})
+
+    try:
+        encoded = _urllib_parse.quote(title, safe='_()')
+        req = _urllib_req.Request(
+            f'https://en.wikipedia.org/api/rest_v1/page/summary/{encoded}',
+            headers={
+                'User-Agent': 'ZenPose/1.0 (yoga pose detection; educational)',
+                'Accept': 'application/json',
+            }
+        )
+        with _urllib_req.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+        url = (data.get('thumbnail') or {}).get('source') or \
+              (data.get('originalimage') or {}).get('source')
+        _POSE_IMG_CACHE[pose] = url
+        return jsonify({'url': url})
+    except Exception as e:
+        print(f'[PoseImage] {pose}: {e}')
+        _POSE_IMG_CACHE[pose] = None
+        return jsonify({'url': None})
 
 # ─── DETECT API ───────────────────────────────────────────────────────────────
 @app.route('/api/detect', methods=['POST'])

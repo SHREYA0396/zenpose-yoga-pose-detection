@@ -95,8 +95,14 @@ async function handleRegister() {
   try {
     const d = await api('/api/register', { name, email, password: pw });
     if (d.error) { showError('reg-error', d.error); return; }
-    document.getElementById('otp-reg-subtitle').textContent =
-      `6-digit code sent to ${email}`;
+    const sub = document.getElementById('otp-reg-subtitle');
+    if (d.dev_otp) {
+      sub.innerHTML = `<span style="color:var(--text-2)">📧 Email not configured.</span><br/>
+        Your OTP is: <strong style="font-size:1.5rem;letter-spacing:4px;color:#22c55e">${d.dev_otp}</strong><br/>
+        <small style="color:var(--text-3)">Add EMAIL_USER &amp; EMAIL_PASS to .env for real email.</small>`;
+    } else {
+      sub.textContent = `6-digit code sent to ${email}`;
+    }
     showStep('step-otp-register');
     setupOtpBoxes('#step-otp-register');
     startResendTimer('resend-reg-btn','resend-reg-timer');
@@ -138,8 +144,14 @@ async function handleLogin() {
   try {
     const d = await api('/api/login', { email, password: pw });
     if (d.error) { showError('login-error', d.error); return; }
-    document.getElementById('otp-login-subtitle').textContent =
-      `6-digit code sent to ${email}`;
+    const sub = document.getElementById('otp-login-subtitle');
+    if (d.dev_otp) {
+      sub.innerHTML = `<span style="color:var(--text-2)">📧 Email not configured.</span><br/>
+        Your OTP is: <strong style="font-size:1.5rem;letter-spacing:4px;color:#22c55e">${d.dev_otp}</strong><br/>
+        <small style="color:var(--text-3)">Add EMAIL_USER &amp; EMAIL_PASS to .env for real email.</small>`;
+    } else {
+      sub.textContent = `6-digit code sent to ${email}`;
+    }
     showStep('step-otp-login');
     setupOtpBoxes('#step-otp-login');
     startResendTimer('resend-login-btn','resend-login-timer');
@@ -174,7 +186,13 @@ async function resendOTP(purpose) {
   try {
     const d = await api('/api/resend-otp', { purpose });
     if (d.error) { showToast(d.error, 'error'); return; }
-    showToast('OTP resent to your email', 'success');
+    if (d.dev_otp) {
+      const subId = purpose === 'register' ? 'otp-reg-subtitle' : 'otp-login-subtitle';
+      document.getElementById(subId).innerHTML =
+        `New OTP: <strong style="font-size:1.5rem;letter-spacing:4px;color:#22c55e">${d.dev_otp}</strong>`;
+    } else {
+      showToast('New OTP sent to your email', 'success');
+    }
     startResendTimer(`resend-${purpose}-btn`, `resend-${purpose}-timer`);
   } catch(e) {
     showToast('Failed to resend OTP', 'error');

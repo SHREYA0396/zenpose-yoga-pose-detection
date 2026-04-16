@@ -431,62 +431,24 @@ function toggleVoice() {
   else window.speechSynthesis?.cancel();
 }
 
-// ─── POSE REFERENCE IMAGE (Wikipedia REST API) ────────────────────────────────
-const WIKI_TITLES = {
-  'tadasana':        'Tadasana',
-  'vrikshasana':     'Vrikshasana',
-  'warrior_i':       'Virabhadrasana_I',
-  'warrior_ii':      'Virabhadrasana_II',
-  'warrior_iii':     'Virabhadrasana_III',
-  'goddess':         'Utkata_Konasana',
-  'downward_dog':    'Downward_Dog_Pose',
-  'cobra':           'Cobra_Pose',
-  'plank':           'Plank_(exercise)',
-  'triangle':        'Trikonasana',
-  'child_pose':      'Child%27s_pose',
-  'chair_pose':      'Utkatasana',
-  'bridge':          'Setu_Bandha_Sarvangasana',
-  'pigeon':          'Pigeon_pose',
-  'camel':           'Ustrasana',
-  'half_moon':       'Ardha_Chandrasana',
-  'boat':            'Navasana',
-  'crow':            'Bakasana',
-  'eagle':           'Garudasana',
-  'lotus':           'Lotus_position',
-  'fish':            'Matsyasana',
-  'seated_forward':  'Paschimottanasana',
-  'supine_twist':    'Supta_Matsyendrasana',
-  'low_lunge':       'Anjaneyasana',
-  'side_plank':      'Vasisthasana',
-};
-
+// ─── POSE REFERENCE IMAGE (server-side proxy → Wikipedia) ────────────────────
 async function loadPoseReferenceImage(pose) {
   const loading     = $('ref-img-loading');
   const img         = $('pose-ref-img');
   const placeholder = $('ref-img-placeholder');
   const badge       = $('prc-badge');
-  const phEmoji     = $('ref-ph-emoji');
 
   if (!img) return;
   img.classList.add('hidden');
   if (placeholder) placeholder.classList.add('hidden');
   if (loading) { loading.classList.remove('hidden'); loading.innerHTML = '<div class="ref-spinner"></div><span>Loading photo…</span>'; }
 
-  const title = WIKI_TITLES[pose];
-  if (!title) {
-    if (loading) loading.classList.add('hidden');
-    if (placeholder) { placeholder.classList.remove('hidden'); if (phEmoji) phEmoji.textContent = state.allPoseData[pose]?.emoji || '🧘'; }
-    return;
-  }
-
   try {
-    const r = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${title}`,
-      { headers: { 'Accept': 'application/json' } }
-    );
+    // Use server-side route to avoid CORS and add proper Wikipedia User-Agent
+    const r = await fetch(`/api/pose-image/${pose}`);
     const d = await r.json();
-    if (d.thumbnail?.source) {
-      img.src = d.thumbnail.source;
+    if (d.url) {
+      img.src = d.url;
       img.onload = () => {
         if (loading) loading.classList.add('hidden');
         img.classList.remove('hidden');
